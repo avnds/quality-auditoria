@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getSessionByToken } from "@/lib/auth/session";
 import db from "@/lib/db";
 import UsuariosTable from "./components/UsuariosTable";
+import NovoUsuarioButton from "./components/NovoUsuarioButton";
 
 type Usuario = {
     id: string;
@@ -96,7 +97,7 @@ export default async function UsuariosPage() {
                 </div>
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 className="text-xl font-semibold text-[#12223f]">
                                 Usuários cadastrados
@@ -107,12 +108,7 @@ export default async function UsuariosPage() {
                             </p>
                         </div>
 
-                        <button
-                            type="button"
-                            className="rounded-lg bg-[#12223f] px-5 py-3 font-semibold text-white transition hover:opacity-90"
-                        >
-                            + Novo usuário
-                        </button>
+                        <NovoUsuarioButton perfilAtual={perfil} />
                     </div>
 
                     <div className="mt-8">
