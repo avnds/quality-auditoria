@@ -68,11 +68,11 @@ export default function LoginPage() {
                     <div className="mx-auto mt-3 h-1 w-30 rounded-full bg-[#c22a2e]" />
 
                     <p className="mt-4 text-gray-600">
-                        Sistema de gestão de auditorias de qualidade
+                        Sistema de gestão de auditorias da qualidade
                     </p>
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+                <div className="rounded-2xl border-2 border-[#12223f] bg-white p-8 shadow-sm">
                     <h2 className="text-2xl font-semibold text-[#12223f]">
                         Entrar
                     </h2>
