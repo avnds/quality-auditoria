@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSessionByToken } from "@/lib/auth/session";
+import db from "@/lib/db";
 import EditarUsuarioForm from "./components/EditarUsuarioForm";
 import AlterarSenhaForm from "./components/AlterarSenhaForm";
 
@@ -32,23 +33,28 @@ export default async function EditarUsuarioPage({
         redirect("/login");
     }
 
+    const perfilAtual = String(session.perfil);
     const { id } = await params;
 
-    const resultado = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/usuarios/${id}`,
-        {
-            headers: {
-                Cookie: `quality_session=${token}`,
-            },
-            cache: "no-store",
-        }
-    );
+    if (!id) {
+        return (
+            <main className="min-h-screen bg-gray-50 p-8">
+                <div className="mx-auto max-w-3xl">
+                    <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
+                        <h1 className="text-xl font-semibold text-[#c22a2e]">
+                            Usuário não encontrado
+                        </h1>
 
-    if (resultado.status === 401) {
-        redirect("/login");
+                        <p className="mt-2 text-gray-600">
+                            O usuário informado não existe.
+                        </p>
+                    </div>
+                </div>
+            </main>
+        );
     }
 
-    if (resultado.status === 403) {
+    if (perfilAtual !== "MASTER" && perfilAtual !== "SUPERVISORA") {
         return (
             <main className="min-h-screen bg-gray-50 p-8">
                 <div className="mx-auto max-w-3xl">
@@ -66,7 +72,24 @@ export default async function EditarUsuarioPage({
         );
     }
 
-    if (resultado.status === 404) {
+    const resultado = await db.execute({
+        sql: `
+            SELECT
+                id,
+                nome,
+                email,
+                perfil,
+                ativo,
+                criado_em,
+                atualizado_em
+            FROM usuarios
+            WHERE id = ?
+            LIMIT 1
+        `,
+        args: [id],
+    });
+
+    if (resultado.rows.length === 0) {
         return (
             <main className="min-h-screen bg-gray-50 p-8">
                 <div className="mx-auto max-w-3xl">
@@ -84,17 +107,22 @@ export default async function EditarUsuarioPage({
         );
     }
 
-    if (!resultado.ok) {
+    const usuarioEncontrado = resultado.rows[0];
+
+    if (
+        perfilAtual === "SUPERVISORA" &&
+        String(usuarioEncontrado.perfil) !== "CONSULTOR"
+    ) {
         return (
             <main className="min-h-screen bg-gray-50 p-8">
                 <div className="mx-auto max-w-3xl">
                     <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
                         <h1 className="text-xl font-semibold text-[#c22a2e]">
-                            Não foi possível carregar o usuário
+                            Acesso não permitido
                         </h1>
 
                         <p className="mt-2 text-gray-600">
-                            Tente novamente mais tarde.
+                            Você não possui permissão para visualizar este usuário.
                         </p>
                     </div>
                 </div>
@@ -102,8 +130,15 @@ export default async function EditarUsuarioPage({
         );
     }
 
-    const dados = await resultado.json();
-    const usuario: Usuario = dados.usuario;
+    const usuario: Usuario = {
+        id: String(usuarioEncontrado.id),
+        nome: String(usuarioEncontrado.nome),
+        email: String(usuarioEncontrado.email),
+        perfil: String(usuarioEncontrado.perfil),
+        ativo: Number(usuarioEncontrado.ativo),
+        criado_em: String(usuarioEncontrado.criado_em),
+        atualizado_em: String(usuarioEncontrado.atualizado_em),
+    };
 
     return (
         <main className="min-h-screen bg-gray-50 p-8">
@@ -121,7 +156,7 @@ export default async function EditarUsuarioPage({
                 </div>
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <EditarUsuarioForm usuario={usuario} />    
+                    <EditarUsuarioForm usuario={usuario} />
 
                     <div className="mt-8 border-t border-gray-100 pt-6">
                         <h2 className="text-lg font-semibold text-[#12223f]">
@@ -132,7 +167,7 @@ export default async function EditarUsuarioPage({
                             Gerencie a senha de acesso deste usuário.
                         </p>
 
-                    <AlterarSenhaForm usuarioId={usuario.id} />    
+                        <AlterarSenhaForm usuarioId={usuario.id} />
                     </div>
                 </div>
 
