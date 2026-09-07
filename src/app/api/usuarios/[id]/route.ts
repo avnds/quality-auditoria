@@ -173,10 +173,8 @@ export async function PATCH(
                 : undefined;
 
         const ativo =
-            typeof body.ativo === "boolean"
+            typeof body.ativo === "number" && (body.ativo === 0 || body.ativo === 1)
                 ? body.ativo
-                    ? 1
-                    : 0
                 : undefined;
 
         if (
