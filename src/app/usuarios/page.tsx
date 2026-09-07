@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSessionByToken } from "@/lib/auth/session";
+import db from "@/lib/db";
 import UsuariosTable from "./components/UsuariosTable";
 
 type Usuario = {
@@ -25,31 +26,19 @@ export default async function UsuariosPage() {
         redirect("/login");
     }
 
-    const resultado = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/usuarios`,
-        {
-            headers: {
-                Cookie: `quality_session=${token}`,
-            },
-            cache: "no-store",
-        }
-    );
+    const perfil = String(session.perfil);
 
-    if (!resultado.ok) {
-        if (resultado.status === 401) {
-            redirect("/login");
-        }
-
+    if (perfil !== "MASTER" && perfil !== "SUPERVISORA") {
         return (
             <main className="min-h-screen bg-gray-50 p-8">
                 <div className="mx-auto max-w-7xl">
                     <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
                         <h1 className="text-xl font-semibold text-[#c22a2e]">
-                            Não foi possível carregar os usuários.
+                            Acesso não permitido
                         </h1>
 
                         <p className="mt-2 text-gray-600">
-                            Tente novamente mais tarde.
+                            Você não possui permissão para visualizar os usuários.
                         </p>
                     </div>
                 </div>
@@ -57,8 +46,39 @@ export default async function UsuariosPage() {
         );
     }
 
-    const dados = await resultado.json();
-    const usuarios: Usuario[] = dados.usuarios ?? [];
+    const sql =
+        perfil === "MASTER"
+            ? `
+                SELECT
+                    id,
+                    nome,
+                    email,
+                    perfil,
+                    ativo
+                FROM usuarios
+                ORDER BY nome
+            `
+            : `
+                SELECT
+                    id,
+                    nome,
+                    email,
+                    perfil,
+                    ativo
+                FROM usuarios
+                WHERE perfil = 'CONSULTOR'
+                ORDER BY nome
+            `;
+
+    const resultado = await db.execute(sql);
+
+    const usuarios: Usuario[] = resultado.rows.map((usuario) => ({
+        id: String(usuario.id),
+        nome: String(usuario.nome),
+        email: String(usuario.email),
+        perfil: String(usuario.perfil),
+        ativo: Number(usuario.ativo),
+    }));
 
     return (
         <main className="min-h-screen bg-gray-50 p-8">
