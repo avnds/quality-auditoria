@@ -61,7 +61,7 @@ export default function EditarUsuarioForm({
 
             setMensagem("Alterações salvas com sucesso.");
 
-            router.refresh();
+            router.push("/usuarios");
         } catch (error) {
             console.error("Erro ao salvar usuário:", error);
             setErro("Não foi possível salvar as alterações.");
@@ -169,6 +169,7 @@ export default function EditarUsuarioForm({
             <div className="flex justify-end gap-3 border-t border-gray-100 pt-6">
                 <button
                     type="button"
+                    onClick={() => router.push("/usuarios")}
                     className="rounded-lg border border-gray-300 px-5 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
                     Cancelar
