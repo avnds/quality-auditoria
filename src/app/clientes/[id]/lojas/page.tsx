@@ -386,8 +386,14 @@ export default async function LojasPage({
                                             </div>
 
                                             {podeGerenciar && (
-                                                <div className="mt-4 border-t border-gray-100 pt-4">
+                                                <div className="mt-4 border-t border-gray-100 pt-4 flex items-center gap-4">
                                                     <EditarLojaButton lojaId={loja.id} />
+
+                                                    <TelefonesLojaButton
+                                                        lojaId={loja.id}
+                                                        podeGerenciar={podeGerenciar}
+                                                    />
+
                                                     <AlterarStatusLojaButton
                                                         lojaId={loja.id}
                                                         ativo={Boolean(loja.ativo)}

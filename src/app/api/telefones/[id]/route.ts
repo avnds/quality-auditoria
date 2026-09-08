@@ -156,7 +156,7 @@ export async function DELETE(
 
         const telefone = await db.execute({
             sql: `
-                SELECT id
+                SELECT id, loja_id, principal
                 FROM telefones
                 WHERE id = ?
                 LIMIT 1
@@ -174,6 +174,10 @@ export async function DELETE(
             );
         }
 
+        const lojaId = String(telefone.rows[0].loja_id);
+        const eraPrincipal =
+            Number(telefone.rows[0].principal) === 1;
+
         await db.execute({
             sql: `
                 DELETE FROM telefones
@@ -181,6 +185,32 @@ export async function DELETE(
             `,
             args: [id],
         });
+
+        if (eraPrincipal) {
+            const proximoPrincipal = await db.execute({
+                sql: `
+                    SELECT id
+                    FROM telefones
+                    WHERE loja_id = ?
+                    ORDER BY id
+                    LIMIT 1
+                `,
+                args: [lojaId],
+            });
+
+            if (proximoPrincipal.rows.length > 0) {
+                await db.execute({
+                    sql: `
+                        UPDATE telefones
+                        SET principal = 1
+                        WHERE id = ?
+                    `,
+                    args: [
+                        proximoPrincipal.rows[0].id,
+                    ],
+                });
+            }
+        }
 
         return NextResponse.json({
             success: true,
