@@ -85,6 +85,13 @@ export default async function UsuariosPage() {
         <main className="min-h-screen bg-gray-50 p-8">
             <div className="mx-auto max-w-7xl">
                 <div className="mb-8">
+                    <a
+                        href="/"
+                        className="mb-4 inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 transition hover:bg-gray-50"
+                    >
+                        ← Voltar para inicial
+                    </a>
+
                     <h1 className="text-3xl font-bold text-[#12223f] font-['Montserrat']">
                         Usuários
                     </h1>
