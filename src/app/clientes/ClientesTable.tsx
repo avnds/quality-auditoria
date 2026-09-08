@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import EditarClienteForm from "./EditarClienteForm";
 
@@ -91,17 +92,26 @@ export default function ClientesTable({
                                 </td>
 
                                 <td className="px-5 py-4 text-right">
-                                    {podeEditar && (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setClienteSelecionado(cliente)
-                                            }
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Link
+                                            href={`/clientes/${cliente.id}/lojas`}
                                             className="text-sm font-semibold text-[#12223f] hover:underline"
                                         >
-                                            Editar
-                                        </button>
-                                    )}
+                                            Lojas
+                                        </Link>
+
+                                        {podeEditar && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setClienteSelecionado(cliente)
+                                                }
+                                                className="text-sm font-semibold text-[#12223f] hover:underline"
+                                            >
+                                                Editar
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -144,8 +154,15 @@ export default function ClientesTable({
                             </span>
                         </div>
 
-                        {podeEditar && (
-                            <div className="mt-4 border-t border-gray-100 pt-4">
+                        <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                            <Link
+                                href={`/clientes/${cliente.id}/lojas`}
+                                className="block w-full rounded-lg border border-[#12223f] px-4 py-3 text-center text-sm font-semibold text-[#12223f] transition hover:bg-gray-50"
+                            >
+                                Ver lojas
+                            </Link>
+
+                            {podeEditar && (
                                 <button
                                     type="button"
                                     onClick={() =>
@@ -155,8 +172,8 @@ export default function ClientesTable({
                                 >
                                     Editar cliente
                                 </button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
