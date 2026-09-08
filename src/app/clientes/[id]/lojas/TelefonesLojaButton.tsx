@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import TelefonesLoja from "./TelefonesLoja";
 
 type TelefonesLojaButtonProps = {
@@ -13,6 +14,13 @@ export default function TelefonesLojaButton({
     podeGerenciar,
 }: TelefonesLojaButtonProps) {
     const [aberto, setAberto] = useState(false);
+
+    const router = useRouter();
+
+    function handleChanged() {
+        setAberto(false);
+        router.refresh();
+    }
 
     return (
         <>
@@ -44,6 +52,7 @@ export default function TelefonesLojaButton({
                         <TelefonesLoja
                             lojaId={lojaId}
                             podeGerenciar={podeGerenciar}
+                            onChanged={handleChanged}
                         />
                     </div>
                 </div>

@@ -13,11 +13,13 @@ type Telefone = {
 type TelefonesLojaProps = {
     lojaId: string;
     podeGerenciar: boolean;
+    onChanged?: () => void;
 };
 
 export default function TelefonesLoja({
     lojaId,
     podeGerenciar,
+    onChanged,
 }: TelefonesLojaProps) {
     const [telefones, setTelefones] = useState<Telefone[]>([]);
     const [carregando, setCarregando] = useState(true);
@@ -50,7 +52,7 @@ export default function TelefonesLoja({
             if (!response.ok) {
                 setErro(
                     dados.message ??
-                        "Não foi possível carregar os telefones."
+                    "Não foi possível carregar os telefones."
                 );
                 return;
             }
@@ -114,7 +116,7 @@ export default function TelefonesLoja({
             if (!response.ok) {
                 setErro(
                     dados.message ??
-                        "Não foi possível cadastrar o telefone."
+                    "Não foi possível cadastrar o telefone."
                 );
                 return;
             }
@@ -124,6 +126,7 @@ export default function TelefonesLoja({
             setPrincipal(false);
 
             await carregarTelefones();
+            onChanged?.();
 
             setSucesso("Telefone cadastrado com sucesso.");
         } catch (error) {
@@ -189,7 +192,7 @@ export default function TelefonesLoja({
             if (!response.ok) {
                 setErro(
                     dados.message ??
-                        "Não foi possível atualizar o telefone."
+                    "Não foi possível atualizar o telefone."
                 );
                 return;
             }
@@ -197,6 +200,7 @@ export default function TelefonesLoja({
             cancelarEdicao();
 
             await carregarTelefones();
+            onChanged?.();
 
             setSucesso("Telefone atualizado com sucesso.");
         } catch (error) {
@@ -234,7 +238,7 @@ export default function TelefonesLoja({
             if (!response.ok) {
                 setErro(
                     dados.message ??
-                        "Não foi possível excluir o telefone."
+                    "Não foi possível excluir o telefone."
                 );
                 return;
             }
@@ -244,6 +248,7 @@ export default function TelefonesLoja({
             }
 
             await carregarTelefones();
+            onChanged?.();
 
             setSucesso("Telefone excluído com sucesso.");
         } catch (error) {
@@ -506,10 +511,10 @@ export default function TelefonesLoja({
 
                                                     {telefone.principal ===
                                                         1 && (
-                                                        <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                                                            Principal
-                                                        </span>
-                                                    )}
+                                                            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                                                Principal
+                                                            </span>
+                                                        )}
                                                 </div>
                                             </div>
 
@@ -525,7 +530,7 @@ export default function TelefonesLoja({
                                                         disabled={
                                                             salvando ||
                                                             excluindoId !==
-                                                                null
+                                                            null
                                                         }
                                                         className="text-sm font-semibold text-[#12223f] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
@@ -542,12 +547,12 @@ export default function TelefonesLoja({
                                                         disabled={
                                                             salvando ||
                                                             excluindoId !==
-                                                                null
+                                                            null
                                                         }
                                                         className="text-sm font-semibold text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         {excluindoId ===
-                                                        telefone.id
+                                                            telefone.id
                                                             ? "Excluindo..."
                                                             : "Excluir"}
                                                     </button>

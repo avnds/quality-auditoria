@@ -22,6 +22,8 @@ type Loja = {
     complemento: string | null;
     bairro: string | null;
     cep: string | null;
+    telefone_principal: string | null;
+    telefone_principal_tipo: string | null;
 };
 
 type Cliente = {
@@ -130,20 +132,25 @@ export default async function LojasPage({
         lojasResult = await db.execute({
             sql: `
                 SELECT
-                    id,
-                    nome,
-                    cnpj,
-                    endereco,
-                    numero,
-                    complemento,
-                    bairro,
-                    cidade,
-                    estado,
-                    cep,
-                    ativo
-                FROM lojas
-                WHERE cliente_id = ?
-                ORDER BY nome
+                    l.id,
+                    l.nome,
+                    l.cnpj,
+                    l.endereco,
+                    l.numero,
+                    l.complemento,
+                    l.bairro,
+                    l.cidade,
+                    l.estado,
+                    l.cep,
+                    l.ativo,
+                    tp.numero AS telefone_principal,
+                    tp.tipo AS telefone_principal_tipo
+                FROM lojas l
+                LEFT JOIN telefones tp
+                    ON tp.loja_id = l.id
+                    AND tp.principal = 1
+                WHERE l.cliente_id = ?
+                ORDER BY l.nome
             `,
             args: [id],
         });
@@ -161,12 +168,17 @@ export default async function LojasPage({
                     l.cidade,
                     l.estado,
                     l.cep,
-                    l.ativo
+                    l.ativo,
+                    tp.numero AS telefone_principal,
+                    tp.tipo AS telefone_principal_tipo
                 FROM lojas l
                 INNER JOIN usuario_lojas ul
                     ON ul.loja_id = l.id
+                LEFT JOIN telefones tp
+                    ON tp.loja_id = l.id
+                    AND tp.principal = 1
                 WHERE l.cliente_id = ?
-                  AND ul.usuario_id = ?
+                    AND ul.usuario_id = ?
                 ORDER BY l.nome
             `,
             args: [id, String(session.usuario_id)],
@@ -200,6 +212,14 @@ export default async function LojasPage({
                 ? null
                 : String(loja.cep),
         ativo: Number(loja.ativo),
+        telefone_principal:
+            loja.telefone_principal === null
+                ? null
+                : String(loja.telefone_principal),
+        telefone_principal_tipo:
+            loja.telefone_principal_tipo === null
+                ? null
+                : String(loja.telefone_principal_tipo),
     }));
 
     const podeGerenciar =
@@ -271,23 +291,27 @@ export default async function LojasPage({
                                     <table className="w-full table-fixed">
                                         <thead className="bg-gray-50">
                                             <tr className="text-left text-sm text-gray-600">
-                                                <th className="w-[30%] px-5 py-4 font-semibold">
+                                                <th className="w-[25%] px-5 py-4 font-semibold">
                                                     Loja
                                                 </th>
 
-                                                <th className="w-[22%] px-5 py-4 font-semibold">
+                                                <th className="w-[18%] px-5 py-4 font-semibold">
                                                     CNPJ
                                                 </th>
 
-                                                <th className="w-[23%] px-5 py-4 font-semibold">
+                                                <th className="w-[18%] px-5 py-4 font-semibold">
                                                     Cidade / UF
                                                 </th>
 
-                                                <th className="w-[15%] px-5 py-4 font-semibold">
+                                                <th className="w-[20%] px-5 py-4 font-semibold">
+                                                    Telefone / WhatsApp
+                                                </th>
+
+                                                <th className="w-[12%] px-5 py-4 font-semibold">
                                                     Status
                                                 </th>
 
-                                                <th className="w-[10%] px-5 py-4 text-right font-semibold">
+                                                <th className="w-[20%] px-5 py-4 text-right font-semibold">
                                                     Ações
                                                 </th>
                                             </tr>
@@ -311,6 +335,29 @@ export default async function LojasPage({
                                                         {loja.cidade} / {loja.estado}
                                                     </td>
 
+                                                    <td className="px-5 py-4 text-sm text-gray-600">
+                                                        {loja.telefone_principal ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <span>{loja.telefone_principal}</span>
+
+                                                                {loja.telefone_principal_tipo === "WhatsApp" && (
+                                                                    <a
+                                                                        href={`https://wa.me/55${loja.telefone_principal.replace(/\D/g, "")}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="font-semibold text-green-600 hover:underline"
+                                                                    >
+                                                                        WhatsApp
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Não informado
+                                                            </span>
+                                                        )}
+                                                    </td>
+
                                                     <td className="px-5 py-4">
                                                         <span
                                                             className={
@@ -326,7 +373,7 @@ export default async function LojasPage({
                                                     </td>
 
                                                     <td className="px-5 py-4">
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex flex-nowrap items-center justify-end gap-3 whitespace-nowrap">
                                                             {podeGerenciar && (
                                                                 <EditarLojaButton
                                                                     lojaId={loja.id}
@@ -370,6 +417,31 @@ export default async function LojasPage({
                                             <p className="mt-1 text-sm text-gray-500">
                                                 {loja.cidade} / {loja.estado}
                                             </p>
+
+                                            <div className="mt-2 text-sm text-gray-500">
+                                                {loja.telefone_principal ? (
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span>
+                                                            {loja.telefone_principal}
+                                                        </span>
+
+                                                        {loja.telefone_principal_tipo === "WhatsApp" && (
+                                                            <a
+                                                                href={`https://wa.me/55${loja.telefone_principal.replace(/\D/g, "")}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="font-semibold text-green-600 hover:underline"
+                                                            >
+                                                                WhatsApp
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400">
+                                                        Telefone: Não informado
+                                                    </span>
+                                                )}
+                                            </div>
 
                                             <div className="mt-4">
                                                 <span
