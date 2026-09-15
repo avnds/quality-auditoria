@@ -89,6 +89,28 @@ export default async function Home() {
                 Acessar →
               </div>
             </Link>
+
+            {/* Setores */}
+            <Link
+              href="/setores"
+              className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-[#12223f] hover:shadow-md"
+            >
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#12223f] text-xl text-white">
+                🏷️
+              </div>
+
+              <h3 className="text-lg font-semibold text-[#12223f]">
+                Setores
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-600">
+                Gerencie os setores utilizados nas lojas.
+              </p>
+
+              <div className="mt-5 text-sm font-semibold text-[#c22a2e]">
+                Acessar →
+              </div>
+            </Link>
           </div>
         </section>
 
