@@ -9,6 +9,7 @@ import AlterarStatusLojaButton from "./AlterarStatusLojaButton";
 import TelefonesLoja from "./TelefonesLoja";
 import LojaCard from "./LojaCard";
 import TelefonesLojaButton from "./TelefonesLojaButton";
+import SetoresLojaButton from "./SetoresLojaButton";
 
 type Loja = {
     id: string;
@@ -375,12 +376,15 @@ export default async function LojasPage({
                                                     <td className="px-5 py-4">
                                                         <div className="flex flex-nowrap items-center justify-end gap-3 whitespace-nowrap">
                                                             {podeGerenciar && (
-                                                                <EditarLojaButton
-                                                                    lojaId={loja.id}
-                                                                />
+                                                                <EditarLojaButton lojaId={loja.id} />
                                                             )}
 
                                                             <TelefonesLojaButton
+                                                                lojaId={loja.id}
+                                                                podeGerenciar={podeGerenciar}
+                                                            />
+
+                                                            <SetoresLojaButton
                                                                 lojaId={loja.id}
                                                                 podeGerenciar={podeGerenciar}
                                                             />
@@ -462,6 +466,11 @@ export default async function LojasPage({
                                                     <EditarLojaButton lojaId={loja.id} />
 
                                                     <TelefonesLojaButton
+                                                        lojaId={loja.id}
+                                                        podeGerenciar={podeGerenciar}
+                                                    />
+
+                                                    <SetoresLojaButton
                                                         lojaId={loja.id}
                                                         podeGerenciar={podeGerenciar}
                                                     />
