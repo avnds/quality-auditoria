@@ -55,7 +55,23 @@ async function migrate() {
 
     for (const statement of statements) {
       console.log("Executando:", statement.substring(0, 80));
-      await db.execute(statement);
+
+      try {
+        await db.execute(statement);
+      } catch (error) {
+        const mensagem =
+          error instanceof Error ? error.message : String(error);
+
+        if (mensagem.toLowerCase().includes("duplicate column name")) {
+          console.log(
+            "Coluna já existe. Continuando migration:",
+            statement.substring(0, 80)
+          );
+          continue;
+        }
+
+        throw error;
+      }
     }
 
     await db.execute({
