@@ -40,6 +40,7 @@ export default function LoginPage() {
             }
 
             router.push("/");
+            router.refresh();
         } catch {
             setError("Não foi possível conectar ao servidor.");
         } finally {

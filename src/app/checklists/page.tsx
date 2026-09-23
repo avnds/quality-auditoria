@@ -70,15 +70,6 @@ export default async function ChecklistsPage() {
     return (
         <main className="min-h-screen bg-slate-50">
             <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <div className="mb-6">
-                    <a
-                        href="/"
-                        className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                        ← Voltar para o início
-                    </a>
-                </div>
-
                 <div className="mb-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
