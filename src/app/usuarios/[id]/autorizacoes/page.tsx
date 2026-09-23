@@ -92,18 +92,56 @@ export default function AutorizacoesConsultorPage() {
     }, [id]);
 
     function alternarCliente(clienteId: string) {
-        setClientesSelecionados((atual) =>
-            atual.includes(clienteId)
-                ? atual.filter((id) => id !== clienteId)
-                : [...atual, clienteId]
-        );
+        const clienteJaSelecionado =
+            clientesSelecionados.includes(clienteId);
+
+        if (clienteJaSelecionado) {
+            setClientesSelecionados((atual) =>
+                atual.filter((id) => id !== clienteId)
+            );
+
+            setLojasSelecionadas((atual) =>
+                atual.filter((lojaId) => {
+                    const loja = lojas.find(
+                        (item) => item.id === lojaId
+                    );
+
+                    return loja?.clienteId !== clienteId;
+                })
+            );
+
+            return;
+        }
+
+        setClientesSelecionados((atual) => [
+            ...atual,
+            clienteId,
+        ]);
     }
 
     function alternarLoja(lojaId: string) {
-        setLojasSelecionadas((atual) =>
-            atual.includes(lojaId)
-                ? atual.filter((id) => id !== lojaId)
-                : [...atual, lojaId]
+        const loja = lojas.find((item) => item.id === lojaId);
+
+        if (!loja) {
+            return;
+        }
+
+        const lojaJaSelecionada = lojasSelecionadas.includes(lojaId);
+
+        if (lojaJaSelecionada) {
+            setLojasSelecionadas((atual) =>
+                atual.filter((id) => id !== lojaId)
+            );
+
+            return;
+        }
+
+        setLojasSelecionadas((atual) => [...atual, lojaId]);
+
+        setClientesSelecionados((atual) =>
+            atual.includes(loja.clienteId)
+                ? atual
+                : [...atual, loja.clienteId]
         );
     }
 
@@ -138,6 +176,8 @@ export default function AutorizacoesConsultorPage() {
             setSucesso(
                 data.message || "Autorizações atualizadas com sucesso."
             );
+
+            router.push("/usuarios");
         } catch (error) {
             setErro(
                 error instanceof Error
@@ -260,8 +300,8 @@ export default function AutorizacoesConsultorPage() {
                             </h2>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                A autorização das lojas é independente da
-                                autorização dos clientes.
+                                Autorizar uma loja também autoriza automaticamente o cliente
+                                correspondente. Autorizar um cliente não autoriza suas lojas.
                             </p>
                         </div>
 

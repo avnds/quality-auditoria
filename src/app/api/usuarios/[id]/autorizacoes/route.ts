@@ -339,6 +339,31 @@ export async function PUT(
             }
         }
 
+        if (lojaIds.length > 0) {
+            const placeholders = lojaIds
+                .map(() => "?")
+                .join(", ");
+
+            const clientesDasLojas = await db.execute({
+                sql: `
+                    SELECT DISTINCT cliente_id
+                    FROM lojas
+                    WHERE ativo = 1
+                      AND cliente_id IS NOT NULL
+                      AND id IN (${placeholders})
+                `,
+                args: lojaIds,
+            });
+
+            for (const row of clientesDasLojas.rows) {
+                const clienteId = String(row.cliente_id);
+
+                if (!clienteIds.includes(clienteId)) {
+                    clienteIds.push(clienteId);
+                }
+            }
+        }
+
         const transaction = await db.transaction();
 
         try {
