@@ -69,6 +69,9 @@ FROM usuarios u
 CROSS JOIN permissoes p
 WHERE u.perfil = 'CONSULTOR'
   AND p.id IN (
+
+    'clientes.visualizar',
+    
     'lojas.visualizar',
 
     'setores.visualizar',

@@ -91,17 +91,33 @@ export default function UsuariosTable({
                                 </td>
 
                                 <td className="px-5 py-4 text-right">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            router.push(
-                                                `/usuarios/${usuario.id}`
-                                            )
-                                        }
-                                        className="text-sm font-semibold text-[#12223f] hover:underline"
-                                    >
-                                        Editar
-                                    </button>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                router.push(
+                                                    `/usuarios/${usuario.id}`
+                                                )
+                                            }
+                                            className="text-sm font-semibold text-[#12223f] hover:underline"
+                                        >
+                                            Editar
+                                        </button>
+
+                                        {usuario.perfil === "CONSULTOR" && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    router.push(
+                                                        `/usuarios/${usuario.id}/autorizacoes`
+                                                    )
+                                                }
+                                                className="text-sm font-semibold text-[#c22a2e] hover:underline"
+                                            >
+                                                Autorizações
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -145,17 +161,33 @@ export default function UsuariosTable({
                         </div>
 
                         <div className="mt-4 border-t border-gray-100 pt-4">
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    router.push(
-                                        `/usuarios/${usuario.id}`
-                                    )
-                                }
-                                className="w-full rounded-lg bg-[#12223f] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                            >
-                                Editar usuário
-                            </button>
+                            <div className="mt-4 grid grid-cols-1 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.push(
+                                            `/usuarios/${usuario.id}`
+                                        )
+                                    }
+                                    className="w-full rounded-lg bg-[#12223f] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                >
+                                    Editar usuário
+                                </button>
+
+                                {usuario.perfil === "CONSULTOR" && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            router.push(
+                                                `/usuarios/${usuario.id}/autorizacoes`
+                                            )
+                                        }
+                                        className="w-full rounded-lg bg-[#c22a2e] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                    >
+                                        Autorizações
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}
