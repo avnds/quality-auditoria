@@ -95,7 +95,7 @@ export default async function GlobalMenu() {
                 <div className="flex shrink-0 items-center gap-4">
                     <GlobalMenuMobile itens={itensVisiveis} />
 
-                    <div className="hidden text-right sm:block">
+                    <div className="text-right">
                         <p className="text-sm font-semibold text-[#22365b]">
                             {usuario.nome}
                         </p>
