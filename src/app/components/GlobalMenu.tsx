@@ -80,8 +80,8 @@ export default async function GlobalMenu() {
 
     return (
         <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
-            <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                <div className="flex min-w-0 items-center gap-8">
+            <div className="mx-auto flex min-h-20 max-w-7xl items-center gap-x-4 px-4 sm:gap-x-6 sm:px-6 lg:px-8">
+                <div className="flex min-w-0 items-center gap-4 sm:gap-8">
                     <GlobalMenuMobile itens={itensVisiveis} />
                     <Link
                         href="/"
@@ -95,12 +95,14 @@ export default async function GlobalMenu() {
                         />
                     </Link>
 
-                    <GlobalMenuLinks itens={itensVisiveis} />
+                    <div className="hidden lg:block">
+                        <GlobalMenuLinks itens={itensVisiveis} />
+                    </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-4">
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-[#22365b]">
+                <div className="ml-auto flex min-w-0 items-start gap-3 sm:gap-6">
+                    <div className="w-[100px] min-w-0 text-right sm:w-[160px] lg:w-[200px]">
+                        <p className="break-words text-xs font-semibold leading-tight text-[#22365b] sm:text-sm">
                             {usuario.nome}
                         </p>
 
@@ -109,7 +111,9 @@ export default async function GlobalMenu() {
                         </p>
                     </div>
 
-                    <LogoutButton />
+                    <div className="shrink-0 pt-0">
+                        <LogoutButton />
+                    </div>
                 </div>
             </div>
         </header>
