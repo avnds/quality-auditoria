@@ -79,22 +79,26 @@ export default async function GlobalMenu() {
     }
 
     return (
-        <header className="relative border-b border-slate-200 bg-white shadow-sm">
+        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
             <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
                 <div className="flex min-w-0 items-center gap-8">
+                    <GlobalMenuMobile itens={itensVisiveis} />
                     <Link
                         href="/"
-                        className="shrink-0 text-lg font-bold tracking-tight text-[#22365b]"
+                        className="shrink-0"
+                        aria-label="Quality Consultoria"
                     >
-                        Quality Consultoria
+                        <img
+                            src="/icone1.png"
+                            alt="Quality Consultoria"
+                            className="h-12 w-auto object-contain"
+                        />
                     </Link>
 
                     <GlobalMenuLinks itens={itensVisiveis} />
                 </div>
 
                 <div className="flex shrink-0 items-center gap-4">
-                    <GlobalMenuMobile itens={itensVisiveis} />
-
                     <div className="text-right">
                         <p className="text-sm font-semibold text-[#22365b]">
                             {usuario.nome}
