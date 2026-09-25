@@ -100,8 +100,8 @@ export default async function GlobalMenu() {
                     </div>
                 </div>
 
-                <div className="ml-auto flex min-w-0 items-start gap-3 sm:gap-6">
-                    <div className="w-[100px] min-w-0 text-right sm:w-[160px] lg:w-[200px]">
+                <div className="ml-auto flex min-w-0 items-center gap-3 sm:gap-6">
+                    <div className="w-[100px] min-w-0 text-center sm:w-[160px] lg:w-[200px]">
                         <p className="break-words text-xs font-semibold leading-tight text-[#22365b] sm:text-sm">
                             {usuario.nome}
                         </p>
