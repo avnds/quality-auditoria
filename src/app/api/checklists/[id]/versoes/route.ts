@@ -233,3 +233,120 @@ export async function POST(
         );
     }
 }
+export async function PATCH(
+    request: Request,
+    context: RouteContext
+) {
+    try {
+        const resultado = await requirePermission(
+            "checklists.ativar_versao"
+        );
+
+        if (!resultado.autorizado) {
+            if (resultado.motivo === "NAO_AUTENTICADO") {
+                return unauthorizedResponse();
+            }
+
+            return forbiddenResponse();
+        }
+
+        const usuario = resultado.usuario;
+
+        if (
+            usuario.perfil !== "MASTER" &&
+            usuario.perfil !== "SUPERVISORA"
+        ) {
+            return forbiddenResponse();
+        }
+
+        const { id } = await context.params;
+
+        const body = await request.json();
+
+        const versaoId =
+            typeof body.versaoId === "string"
+                ? body.versaoId.trim()
+                : "";
+
+        const publicada =
+            typeof body.publicada === "boolean"
+                ? body.publicada
+                : null;
+
+        if (!versaoId || publicada === null) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Versão e status de publicação são obrigatórios.",
+                },
+                { status: 400 }
+            );
+        }
+
+        const versaoResult = await db.execute({
+            sql: `
+                SELECT
+                    id,
+                    checklist_id,
+                    numero,
+                    publicada
+                FROM checklist_versoes
+                WHERE id = ?
+                  AND checklist_id = ?
+                LIMIT 1
+            `,
+            args: [versaoId, id],
+        });
+
+        if (versaoResult.rows.length === 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Versão do checklist não encontrada.",
+                },
+                { status: 404 }
+            );
+        }
+
+        await db.execute({
+            sql: `
+                UPDATE checklist_versoes
+                SET publicada = ?
+                WHERE id = ?
+                  AND checklist_id = ?
+            `,
+            args: [
+                publicada ? 1 : 0,
+                versaoId,
+                id,
+            ],
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: publicada
+                ? "Versão publicada com sucesso."
+                : "Versão despublicada com sucesso.",
+            versao: {
+                id: versaoId,
+                numero: Number(versaoResult.rows[0].numero),
+                publicada,
+            },
+        });
+    } catch (error) {
+        console.error(
+            "Erro ao alterar publicação da versão:",
+            error
+        );
+
+        return NextResponse.json(
+            {
+                success: false,
+                message:
+                    "Não foi possível alterar o status da versão.",
+            },
+            { status: 500 }
+        );
+    }
+}
