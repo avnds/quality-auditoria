@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovaVersaoButton from "./NovaVersaoButton";
+import AlterarPublicacaoVersaoButton from "./AlterarPublicacaoVersaoButton";
 
 type VersoesPageProps = {
     params: Promise<{
@@ -188,6 +189,12 @@ export default async function VersoesPage({
                                     >
                                         Seções
                                     </Link>
+                                    <AlterarPublicacaoVersaoButton
+                                        checklistId={id}
+                                        versaoId={String(versao.id)}
+                                        publicada={Boolean(versao.publicada)}
+                                        podeGerenciar={podeGerenciar}
+                                    />
                                 </div>
                             ))}
                         </div>
