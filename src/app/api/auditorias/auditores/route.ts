@@ -106,10 +106,13 @@ export async function GET(request: Request) {
                 u.ativo
             FROM usuarios u
             WHERE u.ativo = 1
-              AND u.perfil IN ('MASTER', 'SUPERVISORA', 'CONSULTOR')
+                AND (
+                    u.perfil IN ('SUPERVISORA', 'CONSULTOR')
+                    OR (u.perfil = 'MASTER' AND ? = 'MASTER')
+                )
             ORDER BY u.nome
         `,
-        args: [],
+        args: [usuario.perfil],
     });
 
     const auditores = [];

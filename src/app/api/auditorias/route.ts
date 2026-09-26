@@ -155,6 +155,8 @@ export async function POST(request: NextRequest) {
 
         const lojaId = texto(body.lojaId);
         const gerenteLojaNome = texto(body.gerenteLojaNome);
+        const encarregadoNome = texto(body.encarregadoNome);
+        const gerenteSetorNome = texto(body.gerenteSetorNome);
 
         const setores: SetorInput[] = Array.isArray(body.setores)
             ? body.setores
@@ -170,13 +172,33 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        
+
 
         if (!gerenteLojaNome) {
             return NextResponse.json(
                 {
                     success: false,
                     message: "O gerente da loja é obrigatório.",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (!encarregadoNome) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "O encarregado do setor é obrigatório.",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (!gerenteSetorNome) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "O gerente do setor é obrigatório.",
                 },
                 { status: 400 }
             );
@@ -373,6 +395,19 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
+            if (
+                usuario.perfil === "SUPERVISORA" &&
+                String(auditor.perfil) === "MASTER"
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A supervisora não pode selecionar um usuário MASTER como auditor.",
+                    },
+                    { status: 403 }
+                );
+            }
         }
 
         /*
@@ -572,8 +607,8 @@ export async function POST(request: NextRequest) {
                         auditoriaId,
                         lojaId,
                         auditorId,
-                        null,
-                        null,
+                        encarregadoNome,
+                        gerenteSetorNome,
                         gerenteLojaNome,
                     ],
                 },

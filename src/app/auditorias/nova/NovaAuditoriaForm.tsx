@@ -88,6 +88,8 @@ export default function NovaAuditoriaForm({
     const [auditorId, setAuditorId] = useState("");
     const [carregandoAuditores, setCarregandoAuditores] = useState(false);
     const [responsavelLojaNome, setResponsavelLojaNome] = useState("");
+    const [encarregadoNome, setEncarregadoNome] = useState("");
+    const [gerenteSetorNome, setGerenteSetorNome] = useState("");
 
     const [erro, setErro] = useState("");
 
@@ -401,6 +403,16 @@ export default function NovaAuditoriaForm({
                 return;
             }
 
+            if (!encarregadoNome.trim()) {
+                setErro("Informe o encarregado do setor.");
+                return;
+            }
+
+            if (!gerenteSetorNome.trim()) {
+                setErro("Informe o gerente do setor.");
+                return;
+            }
+
             if (setoresSelecionados.length === 0) {
                 setErro("Selecione pelo menos um setor.");
                 return;
@@ -445,6 +457,8 @@ export default function NovaAuditoriaForm({
                 body: JSON.stringify({
                     lojaId,
                     auditorId,
+                    encarregadoNome: encarregadoNome.trim(),
+                    gerenteSetorNome: gerenteSetorNome.trim(),
                     gerenteLojaNome: responsavelLojaNome.trim(),
                     setores: setoresPayload,
                 }),
@@ -645,12 +659,13 @@ export default function NovaAuditoriaForm({
                                     )}
                                 </select>
                             </div>
+
                             <div>
                                 <label
                                     htmlFor="responsavel-loja"
                                     className="mb-2 block text-sm font-medium text-gray-700"
                                 >
-                                    Responsável / Gerente da Loja
+                                    Gerente da Loja
                                 </label>
 
                                 <input
@@ -660,12 +675,54 @@ export default function NovaAuditoriaForm({
                                     onChange={(event) =>
                                         setResponsavelLojaNome(event.target.value)
                                     }
-                                    placeholder="Nome do responsável ou gerente da loja"
+                                    placeholder="Nome do gerente da loja"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-700 outline-none focus:border-[#c22a2e] focus:ring-1 focus:ring-[#c22a2e]"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="encarregado"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Encarregado do Setor
+                                </label>
+
+                                <input
+                                    id="encarregado"
+                                    type="text"
+                                    value={encarregadoNome}
+                                    onChange={(event) =>
+                                        setEncarregadoNome(event.target.value)
+                                    }
+                                    placeholder="Nome do encarregado do setor"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-700 outline-none focus:border-[#c22a2e] focus:ring-1 focus:ring-[#c22a2e]"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="gerente-setor"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Gerente do Setor
+                                </label>
+
+                                <input
+                                    id="gerente-setor"
+                                    type="text"
+                                    value={gerenteSetorNome}
+                                    onChange={(event) =>
+                                        setGerenteSetorNome(event.target.value)
+                                    }
+                                    placeholder="Nome do gerente do setor"
                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-700 outline-none focus:border-[#c22a2e] focus:ring-1 focus:ring-[#c22a2e]"
                                 />
                             </div>
                         </div>
                     </section>
+
+
 
                     <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                         <div className="mb-5">
