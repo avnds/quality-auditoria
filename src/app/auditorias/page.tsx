@@ -56,14 +56,15 @@ export default async function AuditoriasPage() {
             ON u.id = a.auditor_id
         INNER JOIN auditoria_versoes av
             ON av.auditoria_id = a.id
-        ${ehMasterOuSupervisora
+        ${
+            ehMasterOuSupervisora
                 ? ""
                 : `
                     INNER JOIN usuario_lojas ul
                         ON ul.loja_id = a.loja_id
                        AND ul.usuario_id = ?
                 `
-            }
+        }
         WHERE av.numero = (
             SELECT MAX(av2.numero)
             FROM auditoria_versoes av2
@@ -122,6 +123,7 @@ export default async function AuditoriasPage() {
                         </div>
                     ) : (
                         <>
+                            {/* DESKTOP */}
                             <div className="hidden overflow-x-auto md:block">
                                 <table className="min-w-full">
                                     <thead className="border-b border-gray-200 bg-gray-50">
@@ -144,6 +146,10 @@ export default async function AuditoriasPage() {
 
                                             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
                                                 Status
+                                            </th>
+
+                                            <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">
+                                                Ação
                                             </th>
                                         </tr>
                                     </thead>
@@ -181,12 +187,28 @@ export default async function AuditoriasPage() {
                                                         auditoria.status
                                                     )}
                                                 </td>
+
+                                                <td className="px-6 py-4 text-right">
+                                                    <Link
+                                                        href={`/auditorias/${String(
+                                                            auditoria.id
+                                                        )}`}
+                                                        className="inline-flex min-h-[40px] items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#22365b",
+                                                        }}
+                                                    >
+                                                        Executar
+                                                    </Link>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
 
+                            {/* MOBILE */}
                             <div className="divide-y divide-gray-100 md:hidden">
                                 {auditorias.map((auditoria) => (
                                     <div
@@ -225,6 +247,33 @@ export default async function AuditoriasPage() {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            <div>
+                                                <div className="text-xs text-gray-400">
+                                                    Versão
+                                                </div>
+
+                                                <div className="font-medium text-gray-700">
+                                                    v
+                                                    {String(
+                                                        auditoria.versao_numero
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5">
+                                            <Link
+                                                href={`/auditorias/${String(
+                                                    auditoria.id
+                                                )}`}
+                                                className="flex min-h-[44px] w-full items-center justify-center rounded-lg px-4 py-2 font-semibold text-white transition hover:opacity-90"
+                                                style={{
+                                                    backgroundColor: "#22365b",
+                                                }}
+                                            >
+                                                Executar auditoria
+                                            </Link>
                                         </div>
                                     </div>
                                 ))}
