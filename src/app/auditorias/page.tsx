@@ -33,33 +33,45 @@ export default async function AuditoriasPage() {
         );
     }
 
+    const ehMasterOuSupervisora =
+        session.perfil === "MASTER" ||
+        session.perfil === "SUPERVISORA";
+
     const result = await db.execute({
         sql: `
-            SELECT
-                a.id,
-                a.criada_em,
-                l.nome AS loja_nome,
-                c.nome_fantasia AS cliente_nome,
-                u.nome AS auditor_nome,
-                av.numero AS versao_numero,
-                av.status
-            FROM auditorias a
-            INNER JOIN lojas l
-                ON l.id = a.loja_id
-            INNER JOIN clientes c
-                ON c.id = l.cliente_id
-            INNER JOIN usuarios u
-                ON u.id = a.auditor_id
-            INNER JOIN auditoria_versoes av
-                ON av.auditoria_id = a.id
-            WHERE av.numero = (
-                SELECT MAX(av2.numero)
-                FROM auditoria_versoes av2
-                WHERE av2.auditoria_id = a.id
-            )
-            ORDER BY a.criada_em DESC
-        `,
-        args: [],
+        SELECT
+            a.id,
+            a.criada_em,
+            l.nome AS loja_nome,
+            c.nome_fantasia AS cliente_nome,
+            u.nome AS auditor_nome,
+            av.numero AS versao_numero,
+            av.status
+        FROM auditorias a
+        INNER JOIN lojas l
+            ON l.id = a.loja_id
+        INNER JOIN clientes c
+            ON c.id = l.cliente_id
+        INNER JOIN usuarios u
+            ON u.id = a.auditor_id
+        INNER JOIN auditoria_versoes av
+            ON av.auditoria_id = a.id
+        ${ehMasterOuSupervisora
+                ? ""
+                : `
+                    INNER JOIN usuario_lojas ul
+                        ON ul.loja_id = a.loja_id
+                       AND ul.usuario_id = ?
+                `
+            }
+        WHERE av.numero = (
+            SELECT MAX(av2.numero)
+            FROM auditoria_versoes av2
+            WHERE av2.auditoria_id = a.id
+        )
+        ORDER BY a.criada_em DESC
+    `,
+        args: ehMasterOuSupervisora ? [] : [session.usuario_id],
     });
 
     const auditorias = result.rows;
