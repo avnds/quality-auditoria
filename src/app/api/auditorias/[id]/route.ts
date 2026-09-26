@@ -98,7 +98,8 @@ export async function GET(
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Auditoria não encontrada ou sem autorização.",
+                    message:
+                        "Auditoria não encontrada ou sem autorização.",
                 },
                 { status: 404 }
             );
@@ -166,16 +167,28 @@ export async function GET(
                             ci.texto,
                             ci.orientacao,
                             ci.ordem,
-                            ci.ativo
+                            ci.ativo,
+
+                            ar.id AS resposta_id,
+                            ar.resultado AS resposta_resultado,
+                            ar.observacao AS resposta_observacao,
+                            ar.respondido_em AS resposta_respondido_em
 
                         FROM checklist_itens ci
+
+                        LEFT JOIN auditoria_respostas ar
+                            ON ar.checklist_item_id = ci.id
+                           AND ar.auditoria_setor_id = ?
 
                         WHERE ci.checklist_secao_id = ?
                           AND ci.ativo = 1
 
                         ORDER BY ci.ordem
                     `,
-                    args: [secao.id],
+                    args: [
+                        setor.auditoria_setor_id,
+                        secao.id,
+                    ],
                 });
 
                 secoes.push({
@@ -187,6 +200,7 @@ export async function GET(
                             ? null
                             : String(secao.descricao),
                     ordem: Number(secao.ordem),
+
                     itens: itensResult.rows.map((item) => ({
                         id: String(item.id),
                         texto: String(item.texto),
@@ -197,15 +211,56 @@ export async function GET(
                                 : String(item.orientacao),
                         ordem: Number(item.ordem),
                         ativo: Number(item.ativo) === 1,
+
+                        resposta:
+                            item.resposta_id === null ||
+                            item.resposta_id === undefined
+                                ? null
+                                : {
+                                      id: String(
+                                          item.resposta_id
+                                      ),
+                                      resultado:
+                                          item.resposta_resultado ===
+                                              null ||
+                                          item.resposta_resultado ===
+                                              undefined
+                                              ? null
+                                              : String(
+                                                    item.resposta_resultado
+                                                ),
+                                      observacao:
+                                          item.resposta_observacao ===
+                                              null ||
+                                          item.resposta_observacao ===
+                                              undefined
+                                              ? null
+                                              : String(
+                                                    item.resposta_observacao
+                                                ),
+                                      respondido_em:
+                                          item.resposta_respondido_em ===
+                                              null ||
+                                          item.resposta_respondido_em ===
+                                              undefined
+                                              ? null
+                                              : String(
+                                                    item.resposta_respondido_em
+                                                ),
+                                  },
                     })),
                 });
             }
 
             setores.push({
-                auditoria_setor_id: String(setor.auditoria_setor_id),
+                auditoria_setor_id: String(
+                    setor.auditoria_setor_id
+                ),
                 setor_id: String(setor.setor_id),
                 setor_nome: String(setor.setor_nome),
-                checklist_versao_id: String(setor.checklist_versao_id),
+                checklist_versao_id: String(
+                    setor.checklist_versao_id
+                ),
                 checklist_versao_numero: Number(
                     setor.checklist_versao_numero
                 ),
@@ -222,34 +277,54 @@ export async function GET(
                 id: String(auditoria.id),
                 loja_id: String(auditoria.loja_id),
                 loja_nome: String(auditoria.loja_nome),
-                cliente_nome: String(auditoria.cliente_nome),
+                cliente_nome: String(
+                    auditoria.cliente_nome
+                ),
 
                 auditor_id: String(auditoria.auditor_id),
-                auditor_nome: String(auditoria.auditor_nome),
-                auditor_perfil: String(auditoria.auditor_perfil),
+                auditor_nome: String(
+                    auditoria.auditor_nome
+                ),
+                auditor_perfil: String(
+                    auditoria.auditor_perfil
+                ),
 
                 encarregado_nome:
                     auditoria.encarregado_nome === null
                         ? null
-                        : String(auditoria.encarregado_nome),
+                        : String(
+                              auditoria.encarregado_nome
+                          ),
 
                 gerente_setor_nome:
                     auditoria.gerente_setor_nome === null
                         ? null
-                        : String(auditoria.gerente_setor_nome),
+                        : String(
+                              auditoria.gerente_setor_nome
+                          ),
 
                 gerente_loja_nome:
                     auditoria.gerente_loja_nome === null
                         ? null
-                        : String(auditoria.gerente_loja_nome),
+                        : String(
+                              auditoria.gerente_loja_nome
+                          ),
 
                 criada_em: String(auditoria.criada_em),
 
                 versao: {
-                    id: String(auditoria.auditoria_versao_id),
-                    numero: Number(auditoria.versao_numero),
-                    status: String(auditoria.versao_status),
-                    criada_em: String(auditoria.versao_criada_em),
+                    id: String(
+                        auditoria.auditoria_versao_id
+                    ),
+                    numero: Number(
+                        auditoria.versao_numero
+                    ),
+                    status: String(
+                        auditoria.versao_status
+                    ),
+                    criada_em: String(
+                        auditoria.versao_criada_em
+                    ),
                 },
 
                 setores,
