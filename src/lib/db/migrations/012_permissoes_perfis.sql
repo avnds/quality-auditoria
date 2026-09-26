@@ -75,6 +75,8 @@ WHERE u.perfil = 'CONSULTOR'
 
     'setores.visualizar',
 
+    'checklists.visualizar',
+
     'auditorias.visualizar',
     'auditorias.iniciar',
     'auditorias.executar',

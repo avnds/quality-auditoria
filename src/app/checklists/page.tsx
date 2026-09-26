@@ -13,7 +13,8 @@ export default async function ChecklistsPage() {
 
     const podeVisualizar =
         usuario.perfil === "MASTER" ||
-        usuario.perfil === "SUPERVISORA";
+        usuario.perfil === "SUPERVISORA" ||
+        usuario.perfil === "CONSULTOR";
 
     if (!podeVisualizar) {
         redirect("/");
@@ -90,7 +91,7 @@ export default async function ChecklistsPage() {
                         </div>
                     </div>
 
-                    
+
                 </div>
 
                 <ChecklistsTable
