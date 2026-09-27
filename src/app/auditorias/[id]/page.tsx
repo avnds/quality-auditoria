@@ -87,6 +87,10 @@ export default function ExecucaoAuditoriaPage() {
         Record<string, string>
     >({});
 
+    const [setoresAbertos, setSetoresAbertos] = useState<
+        Record<string, boolean>
+    >({});
+
     const [observacoes, setObservacoes] = useState<
         Record<string, string>
     >({});
@@ -102,6 +106,8 @@ export default function ExecucaoAuditoriaPage() {
     const timersObservacao = useRef<
         Record<string, ReturnType<typeof setTimeout>>
     >({});
+
+
 
     useEffect(() => {
         async function carregarAuditoria() {
@@ -512,7 +518,7 @@ export default function ExecucaoAuditoriaPage() {
 
         /*
          * Salva automaticamente após
-         * 700ms sem nova alteração.
+         * 5 segundos sem nova alteração.
          */
         timersObservacao.current[itemId] =
             setTimeout(() => {
@@ -522,7 +528,41 @@ export default function ExecucaoAuditoriaPage() {
                     resultadoAtual,
                     observacao.trim()
                 );
-            }, 700);
+            }, 5000);
+    }
+
+    async function salvarObservacaoAoSair(
+        auditoriaSetorId: string,
+        itemId: string
+    ) {
+        const resultadoAtual = respostas[itemId];
+        const observacaoAtual = observacoes[itemId] ?? "";
+
+        if (
+            resultadoAtual !==
+            "PARCIALMENTE_CONFORME" &&
+            resultadoAtual !== "NAO_CONFORME"
+        ) {
+            return;
+        }
+
+        if (!observacaoAtual.trim()) {
+            return;
+        }
+
+        if (timersObservacao.current[itemId]) {
+            clearTimeout(
+                timersObservacao.current[itemId]
+            );
+            delete timersObservacao.current[itemId];
+        }
+
+        await salvarResposta(
+            auditoriaSetorId,
+            itemId,
+            resultadoAtual,
+            observacaoAtual.trim()
+        );
     }
 
     useEffect(() => {
@@ -573,6 +613,13 @@ export default function ExecucaoAuditoriaPage() {
                 </div>
             </main>
         );
+    }
+
+    function alternarSetor(setorId: string) {
+        setSetoresAbertos((estadoAtual) => ({
+            ...estadoAtual,
+            [setorId]: !estadoAtual[setorId],
+        }));
     }
 
 
@@ -737,8 +784,14 @@ export default function ExecucaoAuditoriaPage() {
                                     className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
                                 >
                                     {/* CABEÇALHO DO SETOR */}
-                                    <div
-                                        className="border-b border-gray-200 px-6 py-5"
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            alternarSetor(
+                                                setor.auditoria_setor_id
+                                            )
+                                        }
+                                        className="w-full border-b border-gray-200 px-6 py-5 text-left transition hover:bg-gray-100"
                                         style={{
                                             backgroundColor:
                                                 "#f8fafc",
@@ -753,11 +806,23 @@ export default function ExecucaoAuditoriaPage() {
                                                     }
                                                 </p>
 
-                                                <h2 className="text-2xl font-bold text-gray-800">
-                                                    {
-                                                        setor.setor_nome
-                                                    }
-                                                </h2>
+                                                <div className="flex items-center gap-3">
+                                                    <span
+                                                        className="text-lg font-bold"
+                                                        style={{ color: "#c22a2e" }}
+                                                        aria-hidden="true"
+                                                    >
+                                                        {setoresAbertos[
+                                                            setor.auditoria_setor_id
+                                                        ]
+                                                            ? "▼"
+                                                            : "▶"}
+                                                    </span>
+
+                                                    <h2 className="text-2xl font-bold text-gray-800">
+                                                        {setor.setor_nome}
+                                                    </h2>
+                                                </div>
                                             </div>
 
                                             <div className="text-left sm:text-right">
@@ -779,242 +844,250 @@ export default function ExecucaoAuditoriaPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                    </div>
+                                    </button>
 
                                     {/* SEÇÕES */}
-                                    <div className="divide-y divide-gray-200">
-                                        {setor.secoes.length === 0 ? (
-                                            <div className="p-6">
-                                                <p className="text-gray-500">
-                                                    Este checklist não possui seções.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            setor.secoes.map((secao) => (
-                                                <div
-                                                    key={secao.id}
-                                                    className="p-6"
-                                                >
-                                                    <div className="mb-5">
-                                                        <h3 className="text-lg font-bold text-gray-800">
-                                                            {secao.nome}
-                                                        </h3>
+                                    {setoresAbertos[setor.auditoria_setor_id] && (
+                                        <div className="divide-y divide-gray-200">
+                                            {setor.secoes.length === 0 ? (
+                                                <div className="p-6">
+                                                    <p className="text-gray-500">
+                                                        Este checklist não possui seções.
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                setor.secoes.map((secao) => (
+                                                    <div
+                                                        key={secao.id}
+                                                        className="p-6"
+                                                    >
+                                                        <div className="mb-5">
+                                                            <h3 className="text-lg font-bold text-gray-800">
+                                                                {secao.nome}
+                                                            </h3>
 
-                                                        {secao.descricao && (
-                                                            <p className="mt-1 text-sm text-gray-500">
-                                                                {secao.descricao}
-                                                            </p>
-                                                        )}
-                                                    </div>
+                                                            {secao.descricao && (
+                                                                <p className="mt-1 text-sm text-gray-500">
+                                                                    {secao.descricao}
+                                                                </p>
+                                                            )}
+                                                        </div>
 
-                                                    {/* ITENS */}
-                                                    <div className="space-y-3">
-                                                        {secao.itens.length === 0 ? (
-                                                            <p className="text-sm text-gray-500">
-                                                                Nenhum item cadastrado nesta seção.
-                                                            </p>
-                                                        ) : (
-                                                            secao.itens.map((item) => {
-                                                                const resultadoAtual =
-                                                                    respostas[item.id];
+                                                        {/* ITENS */}
+                                                        <div className="space-y-3">
+                                                            {secao.itens.length === 0 ? (
+                                                                <p className="text-sm text-gray-500">
+                                                                    Nenhum item cadastrado nesta seção.
+                                                                </p>
+                                                            ) : (
+                                                                secao.itens.map((item) => {
+                                                                    const resultadoAtual =
+                                                                        respostas[item.id];
 
-                                                                const exigeObservacao =
-                                                                    resultadoAtual ===
-                                                                    "PARCIALMENTE_CONFORME" ||
-                                                                    resultadoAtual ===
-                                                                    "NAO_CONFORME";
+                                                                    const exigeObservacao =
+                                                                        resultadoAtual ===
+                                                                        "PARCIALMENTE_CONFORME" ||
+                                                                        resultadoAtual ===
+                                                                        "NAO_CONFORME";
 
-                                                                return (
-                                                                    <div
-                                                                        key={item.id}
-                                                                        className="rounded-lg border border-gray-200 bg-gray-50 p-4"
-                                                                    >
-                                                                        <div className="flex gap-3">
-                                                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-700">
-                                                                                {item.ordem}
-                                                                            </div>
+                                                                    return (
+                                                                        <div
+                                                                            key={item.id}
+                                                                            className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                                                                        >
+                                                                            <div className="flex gap-3">
+                                                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-700">
+                                                                                    {item.ordem}
+                                                                                </div>
 
-                                                                            <div className="min-w-0 flex-1">
-                                                                                <p className="font-medium leading-relaxed text-gray-800">
-                                                                                    {item.texto}
-                                                                                </p>
+                                                                                <div className="min-w-0 flex-1">
+                                                                                    <p className="font-medium leading-relaxed text-gray-800">
+                                                                                        {item.texto}
+                                                                                    </p>
 
-                                                                                {item.orientacao && (
-                                                                                    <div className="mt-2 rounded-md border border-blue-100 bg-blue-50 p-3">
-                                                                                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                                                                                            Orientação
-                                                                                        </p>
+                                                                                    {item.orientacao && (
+                                                                                        <div className="mt-2 rounded-md border border-blue-100 bg-blue-50 p-3">
+                                                                                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                                                                                Orientação
+                                                                                            </p>
 
-                                                                                        <p className="mt-1 text-sm text-blue-900">
-                                                                                            {item.orientacao}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* RESULTADO */}
-                                                                                <div className="mt-4">
-                                                                                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                                                                        <p className="text-sm font-semibold text-gray-700">
-                                                                                            Resultado
-                                                                                        </p>
-
-                                                                                        {salvando[item.id] && (
-                                                                                            <span className="text-xs font-medium text-gray-500">
-                                                                                                Salvando...
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
-
-                                                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            disabled={salvando[item.id]}
-                                                                                            onClick={() =>
-                                                                                                selecionarResultado(
-                                                                                                    setor.auditoria_setor_id,
-                                                                                                    item.id,
-                                                                                                    "CONFORME"
-                                                                                                )
-                                                                                            }
-                                                                                            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
-                                                                                                "CONFORME"
-                                                                                                ? "border-green-600 bg-green-600 text-white"
-                                                                                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                                                                                }`}
-                                                                                        >
-                                                                                            Conforme
-                                                                                        </button>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            disabled={salvando[item.id]}
-                                                                                            onClick={() =>
-                                                                                                selecionarResultado(
-                                                                                                    setor.auditoria_setor_id,
-                                                                                                    item.id,
-                                                                                                    "PARCIALMENTE_CONFORME"
-                                                                                                )
-                                                                                            }
-                                                                                            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
-                                                                                                "PARCIALMENTE_CONFORME"
-                                                                                                ? "border-yellow-500 bg-yellow-500 text-white"
-                                                                                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                                                                                }`}
-                                                                                        >
-                                                                                            Parcialmente Conforme
-                                                                                        </button>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            disabled={salvando[item.id]}
-                                                                                            onClick={() =>
-                                                                                                selecionarResultado(
-                                                                                                    setor.auditoria_setor_id,
-                                                                                                    item.id,
-                                                                                                    "NAO_CONFORME"
-                                                                                                )
-                                                                                            }
-                                                                                            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
-                                                                                                "NAO_CONFORME"
-                                                                                                ? "border-red-600 bg-red-600 text-white"
-                                                                                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                                                                                }`}
-                                                                                        >
-                                                                                            Não Conforme
-                                                                                        </button>
-
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            disabled={salvando[item.id]}
-                                                                                            onClick={() =>
-                                                                                                selecionarResultado(
-                                                                                                    setor.auditoria_setor_id,
-                                                                                                    item.id,
-                                                                                                    "NAO_APLICAVEL"
-                                                                                                )
-                                                                                            }
-                                                                                            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
-                                                                                                "NAO_APLICAVEL"
-                                                                                                ? "border-gray-600 bg-gray-600 text-white"
-                                                                                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                                                                                }`}
-                                                                                        >
-                                                                                            Não Aplicável
-                                                                                        </button>
-
-                                                                                        {(
-                                                                                            respostas[item.id] === "NAO_CONFORME" ||
-                                                                                            respostas[item.id] === "PARCIALMENTE_CONFORME"
-                                                                                        ) && (
-                                                                                                <button
-                                                                                                    type="button"
-                                                                                                    onClick={() =>
-                                                                                                        adicionarEvidencia(item.id)
-                                                                                                    }
-                                                                                                    className="rounded-lg border border-[#22365b] px-3 py-2 text-sm font-medium text-[#22365b] hover:bg-[#22365b] hover:text-white"
-                                                                                                >
-                                                                                                    Adicionar foto
-                                                                                                </button>
-                                                                                            )}
-                                                                                    </div>
-
-                                                                                    {/* OBSERVAÇÃO */}
-                                                                                    {exigeObservacao && (
-                                                                                        <div className="mt-4">
-                                                                                            <label
-                                                                                                htmlFor={`observacao-${item.id}`}
-                                                                                                className="block text-sm font-semibold text-gray-700"
-                                                                                            >
-                                                                                                Observação /
-                                                                                                Justificativa
-                                                                                                <span className="ml-1 text-red-600">
-                                                                                                    *
-                                                                                                </span>
-                                                                                            </label>
-
-                                                                                            <textarea
-                                                                                                id={`observacao-${item.id}`}
-                                                                                                value={
-                                                                                                    observacoes[item.id] ??
-                                                                                                    ""
-                                                                                                }
-                                                                                                onChange={(event) =>
-                                                                                                    alterarObservacao(
-                                                                                                        setor.auditoria_setor_id,
-                                                                                                        item.id,
-                                                                                                        event.target.value
-                                                                                                    )
-                                                                                                }
-                                                                                                placeholder="Informe a justificativa ou descreva a situação encontrada..."
-                                                                                                rows={4}
-                                                                                                className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                                                                            />
-
-                                                                                            <p className="mt-1 text-xs text-gray-500">
-                                                                                                A observação é obrigatória
-                                                                                                para este resultado e é
-                                                                                                salva automaticamente.
+                                                                                            <p className="mt-1 text-sm text-blue-900">
+                                                                                                {item.orientacao}
                                                                                             </p>
                                                                                         </div>
                                                                                     )}
 
-                                                                                    {erroResposta[item.id] && (
-                                                                                        <p className="mt-2 text-sm font-medium text-red-600">
-                                                                                            {erroResposta[item.id]}
-                                                                                        </p>
-                                                                                    )}
+                                                                                    {/* RESULTADO */}
+                                                                                    <div className="mt-4">
+                                                                                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                                                                            <p className="text-sm font-semibold text-gray-700">
+                                                                                                Resultado
+                                                                                            </p>
+
+                                                                                            {salvando[item.id] && (
+                                                                                                <span className="text-xs font-medium text-gray-500">
+                                                                                                    Salvando...
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                disabled={salvando[item.id]}
+                                                                                                onClick={() =>
+                                                                                                    selecionarResultado(
+                                                                                                        setor.auditoria_setor_id,
+                                                                                                        item.id,
+                                                                                                        "CONFORME"
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
+                                                                                                    "CONFORME"
+                                                                                                    ? "border-green-600 bg-green-600 text-white"
+                                                                                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                Conforme
+                                                                                            </button>
+
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                disabled={salvando[item.id]}
+                                                                                                onClick={() =>
+                                                                                                    selecionarResultado(
+                                                                                                        setor.auditoria_setor_id,
+                                                                                                        item.id,
+                                                                                                        "PARCIALMENTE_CONFORME"
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
+                                                                                                    "PARCIALMENTE_CONFORME"
+                                                                                                    ? "border-yellow-500 bg-yellow-500 text-white"
+                                                                                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                Parcialmente Conforme
+                                                                                            </button>
+
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                disabled={salvando[item.id]}
+                                                                                                onClick={() =>
+                                                                                                    selecionarResultado(
+                                                                                                        setor.auditoria_setor_id,
+                                                                                                        item.id,
+                                                                                                        "NAO_CONFORME"
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
+                                                                                                    "NAO_CONFORME"
+                                                                                                    ? "border-red-600 bg-red-600 text-white"
+                                                                                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                Não Conforme
+                                                                                            </button>
+
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                disabled={salvando[item.id]}
+                                                                                                onClick={() =>
+                                                                                                    selecionarResultado(
+                                                                                                        setor.auditoria_setor_id,
+                                                                                                        item.id,
+                                                                                                        "NAO_APLICAVEL"
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold transition ${resultadoAtual ===
+                                                                                                    "NAO_APLICAVEL"
+                                                                                                    ? "border-gray-600 bg-gray-600 text-white"
+                                                                                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                Não Aplicável
+                                                                                            </button>
+
+                                                                                            {(
+                                                                                                respostas[item.id] === "NAO_CONFORME" ||
+                                                                                                respostas[item.id] === "PARCIALMENTE_CONFORME"
+                                                                                            ) && (
+                                                                                                    <button
+                                                                                                        type="button"
+                                                                                                        onClick={() =>
+                                                                                                            adicionarEvidencia(item.id)
+                                                                                                        }
+                                                                                                        className="rounded-lg border border-[#22365b] px-3 py-2 text-sm font-medium text-[#22365b] hover:bg-[#22365b] hover:text-white"
+                                                                                                    >
+                                                                                                        Adicionar foto
+                                                                                                    </button>
+                                                                                                )}
+                                                                                        </div>
+
+                                                                                        {/* OBSERVAÇÃO */}
+                                                                                        {exigeObservacao && (
+                                                                                            <div className="mt-4">
+                                                                                                <label
+                                                                                                    htmlFor={`observacao-${item.id}`}
+                                                                                                    className="block text-sm font-semibold text-gray-700"
+                                                                                                >
+                                                                                                    Observação /
+                                                                                                    Justificativa
+                                                                                                    <span className="ml-1 text-red-600">
+                                                                                                        *
+                                                                                                    </span>
+                                                                                                </label>
+
+                                                                                                <textarea
+                                                                                                    id={`observacao-${item.id}`}
+                                                                                                    value={
+                                                                                                        observacoes[item.id] ??
+                                                                                                        ""
+                                                                                                    }
+                                                                                                    onChange={(event) =>
+                                                                                                        alterarObservacao(
+                                                                                                            setor.auditoria_setor_id,
+                                                                                                            item.id,
+                                                                                                            event.target.value
+                                                                                                        )
+                                                                                                    }
+                                                                                                    onBlur={() =>
+                                                                                                        salvarObservacaoAoSair(
+                                                                                                            setor.auditoria_setor_id,
+                                                                                                            item.id
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder="Informe a justificativa ou descreva a situação encontrada..."
+                                                                                                    rows={4}
+                                                                                                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                                                                                />
+
+                                                                                                <p className="mt-1 text-xs text-gray-500">
+                                                                                                    A observação é obrigatória
+                                                                                                    para este resultado e é
+                                                                                                    salva automaticamente.
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {erroResposta[item.id] && (
+                                                                                            <p className="mt-2 text-sm font-medium text-red-600">
+                                                                                                {erroResposta[item.id]}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-                                                                );
-                                                            })
-                                                        )}
+                                                                    );
+                                                                })
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
                                 </section>
                             )
                         )
