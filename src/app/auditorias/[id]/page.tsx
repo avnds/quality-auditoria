@@ -12,6 +12,12 @@ type Resultado =
     | "NAO_CONFORME"
     | "NAO_APLICAVEL";
 
+type Evidencia = {
+    id: string;
+    ordem: number;
+    versao?: number;
+};
+
 type Item = {
     id: string;
     texto: string;
@@ -23,6 +29,7 @@ type Item = {
         resultado: Resultado | null;
         observacao: string | null;
         respondido_em: string | null;
+        evidencias: Evidencia[];
     } | null;
 };
 
@@ -102,6 +109,9 @@ export default function ExecucaoAuditoriaPage() {
     const [erroResposta, setErroResposta] = useState<
         Record<string, string>
     >({});
+
+    const [evidenciaAberta, setEvidenciaAberta] =
+        useState<Evidencia | null>(null);
 
     const timersObservacao = useRef<
         Record<string, ReturnType<typeof setTimeout>>
@@ -377,10 +387,58 @@ export default function ExecucaoAuditoriaPage() {
                     );
                 }
 
-                console.log(
-                    "EVIDÊNCIA SALVA:",
-                    data.evidencia
-                );
+                const evidenciaSalva: Evidencia = {
+                    id: String(data.evidencia.id),
+                    ordem: Number(data.evidencia.ordem),
+                };
+
+                setAuditoria((auditoriaAtual) => {
+                    if (!auditoriaAtual) {
+                        return auditoriaAtual;
+                    }
+
+                    return {
+                        ...auditoriaAtual,
+                        setores: auditoriaAtual.setores.map(
+                            (setor) => ({
+                                ...setor,
+                                secoes: setor.secoes.map(
+                                    (secao) => ({
+                                        ...secao,
+                                        itens: secao.itens.map(
+                                            (item) => {
+                                                if (
+                                                    item.id !==
+                                                    itemId
+                                                ) {
+                                                    return item;
+                                                }
+
+                                                if (
+                                                    !item.resposta
+                                                ) {
+                                                    return item;
+                                                }
+
+                                                return {
+                                                    ...item,
+                                                    resposta: {
+                                                        ...item.resposta,
+                                                        evidencias: [
+                                                            ...item.resposta
+                                                                .evidencias,
+                                                            evidenciaSalva,
+                                                        ],
+                                                    },
+                                                };
+                                            }
+                                        ),
+                                    })
+                                ),
+                            })
+                        ),
+                    };
+                });
             } catch (error) {
                 console.error(
                     "Erro ao enviar evidência:",
@@ -399,6 +457,156 @@ export default function ExecucaoAuditoriaPage() {
 
         input.click();
     }
+
+    const substituirEvidencia = async (
+        evidencia: Evidencia,
+        itemId: string
+    ) => {
+        const input =
+            document.createElement("input");
+
+        input.type = "file";
+        input.accept =
+            "image/jpeg,image/png,image/webp";
+        input.capture = "environment";
+
+        input.onchange = async () => {
+            const arquivo = input.files?.[0];
+
+            if (!arquivo) {
+                return;
+            }
+
+            if (arquivo.size > 10 * 1024 * 1024) {
+                alert(
+                    "A imagem deve ter no máximo 10 MB."
+                );
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                "evidenciaId",
+                evidencia.id
+            );
+
+            formData.append(
+                "arquivo",
+                arquivo
+            );
+
+            try {
+                const response = await fetch(
+                    `/api/auditorias/${id}/evidencias`,
+                    {
+                        method: "PUT",
+                        body: formData,
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message ??
+                        "Não foi possível substituir a foto."
+                    );
+                }
+
+                const evidenciaAtualizada: Evidencia = {
+                    id: String(data.evidencia.id),
+                    ordem: Number(
+                        data.evidencia.ordem
+                    ),
+                    versao: Date.now(),
+                };
+
+                setAuditoria(
+                    (auditoriaAtual) => {
+                        if (!auditoriaAtual) {
+                            return auditoriaAtual;
+                        }
+
+                        return {
+                            ...auditoriaAtual,
+                            setores:
+                                auditoriaAtual.setores.map(
+                                    (setor) => ({
+                                        ...setor,
+                                        secoes:
+                                            setor.secoes.map(
+                                                (
+                                                    secao
+                                                ) => ({
+                                                    ...secao,
+                                                    itens:
+                                                        secao.itens.map(
+                                                            (
+                                                                item
+                                                            ) => {
+                                                                if (
+                                                                    item.id !==
+                                                                    itemId
+                                                                ) {
+                                                                    return item;
+                                                                }
+
+                                                                if (
+                                                                    !item.resposta
+                                                                ) {
+                                                                    return item;
+                                                                }
+
+                                                                return {
+                                                                    ...item,
+                                                                    resposta:
+                                                                    {
+                                                                        ...item.resposta,
+                                                                        evidencias:
+                                                                            item.resposta.evidencias.map(
+                                                                                (
+                                                                                    evidenciaAtual
+                                                                                ) =>
+                                                                                    evidenciaAtual.id ===
+                                                                                        evidencia.id
+                                                                                        ? evidenciaAtualizada
+                                                                                        : evidenciaAtual
+                                                                            ),
+                                                                    },
+                                                                };
+                                                            }
+                                                        ),
+                                                })
+                                            ),
+                                    })
+                                ),
+                        };
+                    }
+                );
+
+                setEvidenciaAberta(
+                    (aberta) =>
+                        aberta?.id === evidencia.id
+                            ? evidenciaAtualizada
+                            : aberta
+                );
+            } catch (error) {
+                console.error(
+                    "Erro ao substituir evidência:",
+                    error
+                );
+
+                alert(
+                    error instanceof Error
+                        ? error.message
+                        : "Não foi possível substituir a foto."
+                );
+            }
+        };
+
+        input.click();
+    };
 
 
     async function selecionarResultado(
@@ -1012,15 +1220,72 @@ export default function ExecucaoAuditoriaPage() {
                                                                                                 respostas[item.id] === "NAO_CONFORME" ||
                                                                                                 respostas[item.id] === "PARCIALMENTE_CONFORME"
                                                                                             ) && (
-                                                                                                    <button
-                                                                                                        type="button"
-                                                                                                        onClick={() =>
-                                                                                                            adicionarEvidencia(item.id)
-                                                                                                        }
-                                                                                                        className="rounded-lg border border-[#22365b] px-3 py-2 text-sm font-medium text-[#22365b] hover:bg-[#22365b] hover:text-white"
-                                                                                                    >
-                                                                                                        Adicionar foto
-                                                                                                    </button>
+                                                                                                    <>
+                                                                                                        <button
+                                                                                                            type="button"
+                                                                                                            onClick={() =>
+                                                                                                                adicionarEvidencia(item.id)
+                                                                                                            }
+                                                                                                            className="rounded-lg border border-[#22365b] px-3 py-2 text-sm font-medium text-[#22365b] hover:bg-[#22365b] hover:text-white"
+                                                                                                        >
+                                                                                                            {item.resposta?.evidencias.length
+                                                                                                                ? "Adicionar outra foto"
+                                                                                                                : "Adicionar foto"}
+                                                                                                        </button>
+
+                                                                                                        {item.resposta?.evidencias.length ? (
+                                                                                                            <div className="mt-3 w-full">
+                                                                                                                <p className="mb-2 text-sm font-semibold text-gray-700">
+                                                                                                                    Evidências
+                                                                                                                </p>
+
+                                                                                                                <div className="flex flex-wrap gap-3">
+                                                                                                                    {item.resposta.evidencias.map(
+                                                                                                                        (evidencia) => (
+                                                                                                                            <div
+                                                                                                                                key={evidencia.id}
+                                                                                                                                className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                                                                                                            >
+                                                                                                                                <button
+                                                                                                                                    type="button"
+                                                                                                                                    onClick={() =>
+                                                                                                                                        setEvidenciaAberta(evidencia)
+                                                                                                                                    }
+                                                                                                                                    className="block cursor-zoom-in"
+                                                                                                                                    aria-label={`Abrir Foto ${evidencia.ordem}`}
+                                                                                                                                >
+                                                                                                                                    <img
+                                                                                                                                        src={`/api/auditorias/${id}/evidencias?evidenciaId=${encodeURIComponent(
+                                                                                                                                            evidencia.id
+                                                                                                                                        )}&v=${evidencia.versao ?? 0}`}
+                                                                                                                                        alt={`Evidência ${evidencia.ordem}`}
+                                                                                                                                        className="h-28 w-28 object-cover"
+                                                                                                                                    />
+                                                                                                                                </button>
+
+                                                                                                                                <div className="px-2 py-1 text-center text-xs font-medium text-gray-600">
+                                                                                                                                    Foto {evidencia.ordem}
+                                                                                                                                </div>
+
+                                                                                                                                <button
+                                                                                                                                    type="button"
+                                                                                                                                    onClick={() =>
+                                                                                                                                        substituirEvidencia(
+                                                                                                                                            evidencia,
+                                                                                                                                            item.id
+                                                                                                                                        )
+                                                                                                                                    }
+                                                                                                                                    className="w-full border-t border-gray-200 px-2 py-2 text-xs font-semibold text-[#c22a2e] hover:bg-gray-50"
+                                                                                                                                >
+                                                                                                                                    Substituir foto
+                                                                                                                                </button>
+                                                                                                                            </div>
+                                                                                                                        )
+                                                                                                                    )}
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        ) : null}
+                                                                                                    </>
                                                                                                 )}
                                                                                         </div>
 
@@ -1094,6 +1359,48 @@ export default function ExecucaoAuditoriaPage() {
                     )}
                 </div>
             </div>
+
+            {evidenciaAberta && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                    onClick={() =>
+                        setEvidenciaAberta(null)
+                    }
+                >
+                    <div
+                        className="relative flex max-h-[95vh] max-w-5xl flex-col items-center rounded-xl bg-white p-4 shadow-2xl"
+                        onClick={(event) =>
+                            event.stopPropagation()
+                        }
+                    >
+                        <div className="mb-3 flex w-full items-center justify-between gap-4">
+                            <h2 className="text-lg font-bold text-gray-800">
+                                Foto {evidenciaAberta.ordem}
+                            </h2>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setEvidenciaAberta(null)
+                                }
+                                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-xl font-semibold text-gray-700 hover:bg-gray-100"
+                                aria-label="Fechar visualização"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <img
+                            src={`/api/auditorias/${id}/evidencias?evidenciaId=${encodeURIComponent(
+                                evidenciaAberta.id
+                            )}&v=${evidenciaAberta.versao ?? 0}`}
+                            alt={`Evidência ${evidenciaAberta.ordem}`}
+                            className="max-h-[80vh] max-w-full rounded-lg object-contain"
+                        />
+                    </div>
+                </div>
+            )}
+
         </main>
     );
 }
