@@ -66,11 +66,10 @@ export async function GET(
                 INNER JOIN auditoria_versoes av
                     ON av.auditoria_id = a.id
 
-                ${
-                    usuario.perfil === "MASTER" ||
+                ${usuario.perfil === "MASTER" ||
                     usuario.perfil === "SUPERVISORA"
-                        ? ""
-                        : `
+                    ? ""
+                    : `
                             INNER JOIN usuario_lojas ul
                                 ON ul.loja_id = a.loja_id
                                AND ul.usuario_id = ?
@@ -89,7 +88,7 @@ export async function GET(
             `,
             args:
                 usuario.perfil === "MASTER" ||
-                usuario.perfil === "SUPERVISORA"
+                    usuario.perfil === "SUPERVISORA"
                     ? [id]
                     : [usuario.id, id],
         });
@@ -106,6 +105,55 @@ export async function GET(
         }
 
         const auditoria = auditoriaResult.rows[0];
+
+        const evidenciasResult = await db.execute({
+            sql: `
+        SELECT
+            e.id,
+            e.resposta_id,
+            e.ordem
+
+        FROM evidencias e
+
+        INNER JOIN auditoria_respostas ar
+            ON ar.id = e.resposta_id
+
+        INNER JOIN auditoria_setores aus
+            ON aus.id = ar.auditoria_setor_id
+
+        WHERE aus.auditoria_versao_id = ?
+
+        ORDER BY
+            e.resposta_id,
+            e.ordem
+    `,
+            args: [auditoria.auditoria_versao_id],
+        });
+
+        const evidenciasPorResposta = new Map<
+            string,
+            Array<{
+                id: string;
+                ordem: number;
+            }>
+        >();
+
+        for (const evidencia of evidenciasResult.rows) {
+            const respostaId = String(evidencia.resposta_id);
+
+            const lista =
+                evidenciasPorResposta.get(respostaId) ?? [];
+
+            lista.push({
+                id: String(evidencia.id),
+                ordem: Number(evidencia.ordem),
+            });
+
+            evidenciasPorResposta.set(
+                respostaId,
+                lista
+            );
+        }
 
         const setoresResult = await db.execute({
             sql: `
@@ -196,7 +244,7 @@ export async function GET(
                     nome: String(secao.nome),
                     descricao:
                         secao.descricao === null ||
-                        secao.descricao === undefined
+                            secao.descricao === undefined
                             ? null
                             : String(secao.descricao),
                     ordem: Number(secao.ordem),
@@ -206,7 +254,7 @@ export async function GET(
                         texto: String(item.texto),
                         orientacao:
                             item.orientacao === null ||
-                            item.orientacao === undefined
+                                item.orientacao === undefined
                                 ? null
                                 : String(item.orientacao),
                         ordem: Number(item.ordem),
@@ -214,40 +262,46 @@ export async function GET(
 
                         resposta:
                             item.resposta_id === null ||
-                            item.resposta_id === undefined
+                                item.resposta_id === undefined
                                 ? null
                                 : {
-                                      id: String(
-                                          item.resposta_id
-                                      ),
-                                      resultado:
-                                          item.resposta_resultado ===
-                                              null ||
-                                          item.resposta_resultado ===
-                                              undefined
-                                              ? null
-                                              : String(
-                                                    item.resposta_resultado
-                                                ),
-                                      observacao:
-                                          item.resposta_observacao ===
-                                              null ||
-                                          item.resposta_observacao ===
-                                              undefined
-                                              ? null
-                                              : String(
-                                                    item.resposta_observacao
-                                                ),
-                                      respondido_em:
-                                          item.resposta_respondido_em ===
-                                              null ||
-                                          item.resposta_respondido_em ===
-                                              undefined
-                                              ? null
-                                              : String(
-                                                    item.resposta_respondido_em
-                                                ),
-                                  },
+                                    id: String(
+                                        item.resposta_id
+                                    ),
+                                    resultado:
+                                        item.resposta_resultado ===
+                                            null ||
+                                            item.resposta_resultado ===
+                                            undefined
+                                            ? null
+                                            : String(
+                                                item.resposta_resultado
+                                            ),
+                                    observacao:
+                                        item.resposta_observacao ===
+                                            null ||
+                                            item.resposta_observacao ===
+                                            undefined
+                                            ? null
+                                            : String(
+                                                item.resposta_observacao
+                                            ),
+                                    respondido_em:
+                                        item.resposta_respondido_em ===
+                                            null ||
+                                            item.resposta_respondido_em ===
+                                            undefined
+                                            ? null
+                                            : String(
+                                                item.resposta_respondido_em
+                                            ),
+                                    evidencias:
+                                        evidenciasPorResposta.get(
+                                            String(
+                                                item.resposta_id
+                                            )
+                                        ) ?? [],
+                                },
                     })),
                 });
             }
@@ -293,22 +347,22 @@ export async function GET(
                     auditoria.encarregado_nome === null
                         ? null
                         : String(
-                              auditoria.encarregado_nome
-                          ),
+                            auditoria.encarregado_nome
+                        ),
 
                 gerente_setor_nome:
                     auditoria.gerente_setor_nome === null
                         ? null
                         : String(
-                              auditoria.gerente_setor_nome
-                          ),
+                            auditoria.gerente_setor_nome
+                        ),
 
                 gerente_loja_nome:
                     auditoria.gerente_loja_nome === null
                         ? null
                         : String(
-                              auditoria.gerente_loja_nome
-                          ),
+                            auditoria.gerente_loja_nome
+                        ),
 
                 criada_em: String(auditoria.criada_em),
 
