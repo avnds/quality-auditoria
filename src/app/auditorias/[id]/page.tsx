@@ -61,6 +61,7 @@ type Auditoria = {
     auditor_id: string;
     auditor_nome: string;
     auditor_perfil: string;
+    usuario_perfil: string;
     encarregado_nome: string | null;
     gerente_setor_nome: string | null;
     gerente_loja_nome: string | null;
@@ -607,6 +608,128 @@ export default function ExecucaoAuditoriaPage() {
 
         input.click();
     };
+    async function enviarParaValidacao() {
+        if (!auditoria) {
+            return;
+        }
+
+        if (auditoria.versao.status !== "ABERTA") {
+            return;
+        }
+
+        const confirmar = window.confirm(
+            "Deseja enviar esta auditoria para validação?\n\nDepois do envio, a auditoria não poderá mais ser editada nesta versão."
+        );
+
+        if (!confirmar) {
+            return;
+        }
+
+        try {
+            setErro("");
+
+            const response = await fetch(
+                `/api/auditorias/${id}/enviar-validacao`,
+                {
+                    method: "POST",
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ??
+                    "Não foi possível enviar a auditoria para validação."
+                );
+            }
+
+            setAuditoria((auditoriaAtual) => {
+                if (!auditoriaAtual) {
+                    return auditoriaAtual;
+                }
+
+                return {
+                    ...auditoriaAtual,
+                    versao: {
+                        ...auditoriaAtual.versao,
+                        status: "ENVIADA",
+                    },
+                };
+            });
+        } catch (error) {
+            console.error(
+                "Erro ao enviar auditoria para validação:",
+                error
+            );
+
+            setErro(
+                error instanceof Error
+                    ? error.message
+                    : "Não foi possível enviar a auditoria para validação."
+            );
+        }
+    }
+
+    async function finalizarAuditoria() {
+        if (!auditoria) return;
+
+        if (
+            auditoria.usuario_perfil !== "SUPERVISORA" ||
+            auditoria.versao.status !== "ENVIADA"
+        ) {
+            return;
+        }
+
+        const confirmar = window.confirm(
+            "Deseja finalizar esta auditoria?\n\nDepois da finalização, esta versão será encerrada."
+        );
+
+        if (!confirmar) return;
+
+        try {
+            setErro("");
+
+            const response = await fetch(
+                `/api/auditorias/${id}/finalizar`,
+                {
+                    method: "POST",
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ??
+                    "Não foi possível finalizar a auditoria."
+                );
+            }
+
+            setAuditoria((auditoriaAtual) => {
+                if (!auditoriaAtual) return auditoriaAtual;
+
+                return {
+                    ...auditoriaAtual,
+                    versao: {
+                        ...auditoriaAtual.versao,
+                        status: "FINALIZADA",
+                    },
+                };
+            });
+        } catch (error) {
+            console.error(
+                "Erro ao finalizar auditoria:",
+                error
+            );
+
+            setErro(
+                error instanceof Error
+                    ? error.message
+                    : "Não foi possível finalizar a auditoria."
+            );
+        }
+    }
 
 
     async function selecionarResultado(
@@ -1359,6 +1482,31 @@ export default function ExecucaoAuditoriaPage() {
                     )}
                 </div>
             </div>
+
+            {auditoria.versao.status === "ABERTA" && (
+                <div className="mt-6 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={enviarParaValidacao}
+                        className="min-h-[44px] rounded-lg bg-[#22365b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1a2a47]"
+                    >
+                        Enviar para validação
+                    </button>
+                </div>
+            )}
+
+            {auditoria.usuario_perfil === "SUPERVISORA" &&
+                auditoria.versao.status === "ENVIADA" && (
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={finalizarAuditoria}
+                            className="min-h-[44px] rounded-lg bg-[#c22a2e] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#a82226]"
+                        >
+                            Finalizar auditoria
+                        </button>
+                    </div>
+                )}
 
             {evidenciaAberta && (
                 <div

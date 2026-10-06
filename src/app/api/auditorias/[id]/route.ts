@@ -328,6 +328,7 @@ export async function GET(
         return NextResponse.json({
             success: true,
             auditoria: {
+                usuario_perfil: usuario.perfil,
                 id: String(auditoria.id),
                 loja_id: String(auditoria.loja_id),
                 loja_nome: String(auditoria.loja_nome),
