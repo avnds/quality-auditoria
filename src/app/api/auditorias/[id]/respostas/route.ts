@@ -59,7 +59,7 @@ export async function POST(
 
         const observacao =
             body.observacao === null ||
-            body.observacao === undefined
+                body.observacao === undefined
                 ? ""
                 : String(body.observacao).trim();
 
@@ -155,7 +155,10 @@ export async function POST(
             }
         }
 
-        if (String(auditoria.status) !== "ABERTA") {
+        if (
+            String(auditoria.status) !== "ABERTA" &&
+            String(auditoria.status) !== "EM_CORRECAO"
+        ) {
             return NextResponse.json(
                 {
                     success: false,

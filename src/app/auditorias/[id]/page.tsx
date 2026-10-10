@@ -71,6 +71,7 @@ type Auditoria = {
         numero: number;
         status: string;
         criada_em: string;
+        motivo_devolucao: string | null;
     };
     setores: Setor[];
 };
@@ -275,6 +276,40 @@ export default function ExecucaoAuditoriaPage() {
                     [itemId]: String(data.resposta.id),
                 }));
             }
+
+            setAuditoria((auditoriaAtual) => {
+                if (!auditoriaAtual) {
+                    return auditoriaAtual;
+                }
+
+                return {
+                    ...auditoriaAtual,
+                    setores: auditoriaAtual.setores.map((setor) => ({
+                        ...setor,
+                        secoes: setor.secoes.map((secao) => ({
+                            ...secao,
+                            itens: secao.itens.map((item) => {
+                                if (item.id !== itemId) {
+                                    return item;
+                                }
+
+                                return {
+                                    ...item,
+                                    resposta: {
+                                        id: String(data.resposta.id),
+                                        resultado,
+                                        observacao: observacao || null,
+                                        respondido_em:
+                                            item.resposta?.respondido_em ?? null,
+                                        evidencias:
+                                            item.resposta?.evidencias ?? [],
+                                    },
+                                };
+                            }),
+                        })),
+                    })),
+                };
+            });
 
             setRespostas((estadoAtual) => ({
                 ...estadoAtual,
@@ -587,6 +622,7 @@ export default function ExecucaoAuditoriaPage() {
                 );
 
                 setEvidenciaAberta(
+
                     (aberta) =>
                         aberta?.id === evidencia.id
                             ? evidenciaAtualizada
@@ -613,12 +649,20 @@ export default function ExecucaoAuditoriaPage() {
             return;
         }
 
-        if (auditoria.versao.status !== "ABERTA") {
+        if (
+            auditoria.versao.status !== "ABERTA" &&
+            auditoria.versao.status !== "EM_CORRECAO"
+        ) {
             return;
         }
 
+        const estaEmCorrecao =
+            auditoria.versao.status === "EM_CORRECAO";
+
         const confirmar = window.confirm(
-            "Deseja enviar esta auditoria para validação?\n\nDepois do envio, a auditoria não poderá mais ser editada nesta versão."
+            estaEmCorrecao
+                ? "Deseja reenviar esta auditoria para validação?\n\nAs correções serão enviadas na mesma versão da auditoria."
+                : "Deseja enviar esta auditoria para validação?\n\nDepois do envio, a auditoria não poderá mais ser editada nesta versão."
         );
 
         if (!confirmar) {
@@ -731,6 +775,102 @@ export default function ExecucaoAuditoriaPage() {
         }
     }
 
+    async function devolverParaCorrecao() {
+        if (
+            !auditoria ||
+            auditoria.usuario_perfil !== "SUPERVISORA" ||
+            auditoria.versao.status !== "ENVIADA"
+        ) {
+            return;
+        }
+
+        const motivo = window.prompt(
+            "Informe o motivo da devolução para correção:"
+        );
+
+        if (motivo === null) {
+            return;
+        }
+
+        if (!motivo.trim()) {
+            setErro("O motivo da devolução é obrigatório.");
+            return;
+        }
+
+        if (motivo.trim().length > 2000) {
+            setErro(
+                "O motivo deve ter no máximo 2000 caracteres."
+            );
+            return;
+        }
+
+        const confirmar = window.confirm(
+            "Deseja devolver esta auditoria para correção?\n\nA mesma versão será reaberta, preservando as respostas e evidências."
+        );
+
+        if (!confirmar) {
+            return;
+        }
+
+        try {
+            setErro("");
+
+            const response = await fetch(
+                `/api/auditorias/${id}/devolver`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        motivo: motivo.trim(),
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ??
+                    "Não foi possível devolver a auditoria para correção."
+                );
+            }
+
+            setAuditoria((auditoriaAtual) => {
+                if (!auditoriaAtual) {
+                    return auditoriaAtual;
+                }
+
+                return {
+                    ...auditoriaAtual,
+                    versao: {
+                        ...auditoriaAtual.versao,
+                        status: "EM_CORRECAO",
+                        motivo_devolucao: motivo.trim(),
+                    },
+                };
+            });
+        } catch (error) {
+            console.error(
+                "Erro ao devolver auditoria para correção:",
+                error
+            );
+
+            setErro(
+                error instanceof Error
+                    ? error.message
+                    : "Não foi possível devolver a auditoria para correção."
+            );
+        }
+    }
+    function podeEditarAuditoria() {
+        return (
+            auditoria?.versao.status === "ABERTA" ||
+            auditoria?.versao.status === "EM_CORRECAO"
+        );
+    }
+
 
     async function selecionarResultado(
         auditoriaSetorId: string,
@@ -812,6 +952,9 @@ export default function ExecucaoAuditoriaPage() {
         itemId: string,
         observacao: string
     ) {
+        if (!podeEditarAuditoria()) {
+            return;
+        }
         setObservacoes((estadoAtual) => ({
             ...estadoAtual,
             [itemId]: observacao,
@@ -866,6 +1009,9 @@ export default function ExecucaoAuditoriaPage() {
         auditoriaSetorId: string,
         itemId: string
     ) {
+        if (!podeEditarAuditoria()) {
+            return;
+        }
         const resultadoAtual = respostas[itemId];
         const observacaoAtual = observacoes[itemId] ?? "";
 
@@ -1094,6 +1240,30 @@ export default function ExecucaoAuditoriaPage() {
                         </div>
                     </div>
                 </section>
+                {auditoria.versao.status === "EM_CORRECAO" && (
+                    <section className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
+                        <h2 className="text-lg font-bold text-amber-900">
+                            Auditoria devolvida para correção
+                        </h2>
+
+                        <p className="mt-2 text-sm text-amber-800">
+                            A supervisora solicitou correções nesta mesma versão.
+                            Revise o motivo abaixo, ajuste as respostas necessárias
+                            e reenvie a auditoria para validação.
+                        </p>
+
+                        <div className="mt-4 rounded-lg border border-amber-200 bg-white p-4">
+                            <p className="text-sm font-semibold text-gray-700">
+                                Motivo da devolução
+                            </p>
+
+                            <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">
+                                {auditoria.versao.motivo_devolucao ||
+                                    "O motivo não foi informado."}
+                            </p>
+                        </div>
+                    </section>
+                )}
 
                 {/* SETORES */}
                 <div className="space-y-8">
@@ -1265,7 +1435,7 @@ export default function ExecucaoAuditoriaPage() {
                                                                                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                                                                                             <button
                                                                                                 type="button"
-                                                                                                disabled={salvando[item.id]}
+                                                                                                disabled={salvando[item.id] || !podeEditarAuditoria()}
                                                                                                 onClick={() =>
                                                                                                     selecionarResultado(
                                                                                                         setor.auditoria_setor_id,
@@ -1346,6 +1516,7 @@ export default function ExecucaoAuditoriaPage() {
                                                                                                     <>
                                                                                                         <button
                                                                                                             type="button"
+                                                                                                            disabled={!podeEditarAuditoria()}
                                                                                                             onClick={() =>
                                                                                                                 adicionarEvidencia(item.id)
                                                                                                             }
@@ -1376,6 +1547,7 @@ export default function ExecucaoAuditoriaPage() {
                                                                                                                                     }
                                                                                                                                     className="block cursor-zoom-in"
                                                                                                                                     aria-label={`Abrir Foto ${evidencia.ordem}`}
+                                                                                                                                    disabled={!podeEditarAuditoria()}
                                                                                                                                 >
                                                                                                                                     <img
                                                                                                                                         src={`/api/auditorias/${id}/evidencias?evidenciaId=${encodeURIComponent(
@@ -1428,6 +1600,7 @@ export default function ExecucaoAuditoriaPage() {
 
                                                                                                 <textarea
                                                                                                     id={`observacao-${item.id}`}
+                                                                                                    disabled={!podeEditarAuditoria()}
                                                                                                     value={
                                                                                                         observacoes[item.id] ??
                                                                                                         ""
@@ -1483,21 +1656,34 @@ export default function ExecucaoAuditoriaPage() {
                 </div>
             </div>
 
-            {auditoria.versao.status === "ABERTA" && (
-                <div className="mt-6 flex justify-end">
-                    <button
-                        type="button"
-                        onClick={enviarParaValidacao}
-                        className="min-h-[44px] rounded-lg bg-[#22365b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1a2a47]"
-                    >
-                        Enviar para validação
-                    </button>
-                </div>
-            )}
+            {(
+                auditoria.versao.status === "ABERTA" ||
+                auditoria.versao.status === "EM_CORRECAO"
+            ) && (
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={enviarParaValidacao}
+                            className="min-h-[44px] rounded-lg bg-[#22365b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1a2a47]"
+                        >
+                            {auditoria.versao.status === "EM_CORRECAO"
+                                ? "Enviar novamente para validação"
+                                : "Enviar para validação"}
+                        </button>
+                    </div>
+                )}
 
             {auditoria.usuario_perfil === "SUPERVISORA" &&
                 auditoria.versao.status === "ENVIADA" && (
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-6 flex flex-wrap justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={devolverParaCorrecao}
+                            className="min-h-[44px] rounded-lg border border-[#c22a2e] px-6 py-3 text-sm font-semibold text-[#c22a2e] transition hover:bg-red-50"
+                        >
+                            Devolver para correção
+                        </button>
+
                         <button
                             type="button"
                             onClick={finalizarAuditoria}

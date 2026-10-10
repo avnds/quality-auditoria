@@ -432,9 +432,8 @@ export async function POST(
         }
 
         if (
-            String(
-                auditoria.auditoria_status
-            ) !== "ABERTA"
+            String(auditoria.auditoria_status) !== "ABERTA" &&
+            String(auditoria.auditoria_status) !== "EM_CORRECAO"
         ) {
             return NextResponse.json(
                 {
@@ -811,9 +810,8 @@ export async function PUT(
         }
 
         if (
-            String(
-                auditoria.auditoria_status
-            ) !== "ABERTA"
+            String(auditoria.auditoria_status) !== "ABERTA" &&
+            String(auditoria.auditoria_status) !== "EM_CORRECAO"
         ) {
             return NextResponse.json(
                 {
