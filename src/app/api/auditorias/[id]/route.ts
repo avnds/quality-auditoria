@@ -50,7 +50,8 @@ export async function GET(
                     av.id AS auditoria_versao_id,
                     av.numero AS versao_numero,
                     av.status AS versao_status,
-                    av.criada_em AS versao_criada_em
+                    av.criada_em AS versao_criada_em,
+                    av.motivo_devolucao AS motivo_devolucao
 
                 FROM auditorias a
 
@@ -366,6 +367,13 @@ export async function GET(
                         ),
 
                 criada_em: String(auditoria.criada_em),
+                motivo_devolucao:
+                    auditoria.motivo_devolucao === null ||
+                        auditoria.motivo_devolucao === undefined
+                        ? null
+                        : String(
+                            auditoria.motivo_devolucao
+                        ),
 
                 versao: {
                     id: String(

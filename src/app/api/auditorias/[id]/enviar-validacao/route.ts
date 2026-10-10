@@ -89,7 +89,10 @@ export async function POST(
         /*
          * 3. A auditoria precisa estar aberta.
          */
-        if (String(auditoria.status) !== "ABERTA") {
+        if (
+            String(auditoria.status) !== "ABERTA" &&
+            String(auditoria.status) !== "EM_CORRECAO"
+        ) {
             return NextResponse.json(
                 {
                     success: false,
@@ -203,6 +206,10 @@ export async function POST(
                 { status: 409 }
             );
         }
+        const acaoHistorico =
+            String(auditoria.status) === "EM_CORRECAO"
+                ? "REENVIADA"
+                : "ENVIADA_PARA_VALIDACAO";
 
         /*
          * 8. Atualiza o status e registra o histórico
@@ -216,7 +223,7 @@ export async function POST(
                         SET status = 'ENVIADA',
                             enviada_em = CURRENT_TIMESTAMP
                         WHERE id = ?
-                          AND status = 'ABERTA'
+                            AND status IN ('ABERTA', 'EM_CORRECAO')
                     `,
                     args: [
                         String(
@@ -233,12 +240,13 @@ export async function POST(
                             acao,
                             detalhes
                         )
-                        VALUES (?, ?, ?, 'ENVIADA_PARA_VALIDACAO', ?)
+                        VALUES (?, ?, ?, ?, ?)
                     `,
                     args: [
                         crypto.randomUUID(),
                         String(id),
                         String(usuario.id),
+                        acaoHistorico,
                         JSON.stringify({
                             auditoriaVersaoId:
                                 String(
