@@ -381,6 +381,18 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (
+            usuario.perfil === "SUPERVISORA" &&
+            String(auditor.perfil) === "MASTER"
+        ) {
+            return NextResponse.json(
+                {
+                    erro: "Uma supervisora não pode selecionar um usuário MASTER como auditor.",
+                },
+                { status: 403 }
+            );
+        }
+
         const auditorPodeExecutar = await temPermissao(
             auditorId,
             "auditorias.executar"
@@ -395,19 +407,6 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
-            if (
-                usuario.perfil === "SUPERVISORA" &&
-                String(auditor.perfil) === "MASTER"
-            ) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "A supervisora não pode selecionar um usuário MASTER como auditor.",
-                    },
-                    { status: 403 }
-                );
-            }
         }
 
         /*

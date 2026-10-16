@@ -388,6 +388,13 @@ export async function GET(
                     criada_em: String(
                         auditoria.versao_criada_em
                     ),
+                    motivo_devolucao:
+                        auditoria.motivo_devolucao === null ||
+                            auditoria.motivo_devolucao === undefined
+                            ? null
+                            : String(
+                                auditoria.motivo_devolucao
+                            ),
                 },
 
                 setores,

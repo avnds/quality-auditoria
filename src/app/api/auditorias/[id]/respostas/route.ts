@@ -97,6 +97,7 @@ export async function POST(
                 SELECT
                     a.id,
                     a.loja_id,
+                    a.auditor_id,
                     av.id AS auditoria_versao_id,
                     av.status
                 FROM auditorias a
@@ -124,6 +125,17 @@ export async function POST(
         }
 
         const auditoria = auditoriaResult.rows[0];
+
+        if (String(auditoria.auditor_id) !== String(usuario.id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Somente o auditor responsável pode alterar as respostas desta auditoria.",
+                },
+                { status: 403 }
+            );
+        }
 
         if (
             usuario.perfil !== "MASTER" &&

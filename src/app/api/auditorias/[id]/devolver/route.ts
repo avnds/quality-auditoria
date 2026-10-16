@@ -120,42 +120,65 @@ export async function POST(
 
         const agora = new Date().toISOString();
 
-        await db.batch(
-            [
-                {
-                    sql: `
-                        UPDATE auditoria_versoes
-                        SET
-                            status = 'EM_CORRECAO',
-                            motivo_devolucao = ?
-                        WHERE id = ?
-                          AND status = 'ENVIADA'
-                    `,
-                    args: [motivo, versao.id],
-                },
-                {
-                    sql: `
-                        INSERT INTO auditoria_historico (
-                            id,
-                            auditoria_id,
-                            usuario_id,
-                            acao,
-                            detalhes,
-                            criado_em
-                        )
-                        VALUES (?, ?, ?, 'DEVOLVIDA', ?, ?)
-                    `,
-                    args: [
-                        crypto.randomUUID(),
-                        id,
-                        usuario.id,
-                        `Versão ${versao.numero} devolvida para correção. Motivo: ${motivo}`,
-                        agora,
-                    ],
-                },
-            ],
-            "write"
-        );
+        const transacao = await db.transaction("write");
+
+        try {
+            const atualizacao = await transacao.execute({
+                sql: `
+            UPDATE auditoria_versoes
+            SET
+                status = 'EM_CORRECAO',
+                motivo_devolucao = ?
+            WHERE id = ?
+              AND status = 'ENVIADA'
+        `,
+                args: [motivo, versao.id],
+            });
+
+            if (atualizacao.rowsAffected !== 1) {
+                await transacao.rollback();
+
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A auditoria já foi alterada. Atualize a página antes de tentar novamente.",
+                    },
+                    { status: 409 }
+                );
+            }
+
+            await transacao.execute({
+                sql: `
+            INSERT INTO auditoria_historico (
+                id,
+                auditoria_id,
+                usuario_id,
+                acao,
+                detalhes,
+                criado_em
+            )
+            VALUES (?, ?, ?, 'DEVOLVIDA', ?, ?)
+        `,
+                args: [
+                    crypto.randomUUID(),
+                    id,
+                    usuario.id,
+                    `Versão ${versao.numero} devolvida para correção. Motivo: ${motivo}`,
+                    agora,
+                ],
+            });
+
+            await transacao.commit();
+        } catch (error) {
+            try {
+                await transacao.rollback();
+            } catch {
+                // Preserva o erro original da transação.
+            }
+
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,

@@ -127,6 +127,17 @@ export async function POST(
             ],
         });
 
+        if (itensResult.rows.length === 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "A auditoria não possui itens de checklist para responder.",
+                },
+                { status: 409 }
+            );
+        }
+
         /*
          * 5. Conta as respostas existentes para os itens
          *    pertencentes à versão atual da auditoria.
@@ -135,28 +146,69 @@ export async function POST(
             sql: `
                 SELECT
                     ar.auditoria_setor_id,
-                    ar.checklist_item_id
+                    ar.checklist_item_id,
+                    ar.resultado
                 FROM auditoria_respostas ar
                 INNER JOIN auditoria_setores aus
                     ON aus.id = ar.auditoria_setor_id
+                INNER JOIN checklist_itens ci
+                    ON ci.id = ar.checklist_item_id
+                INNER JOIN checklist_secoes cs
+                    ON cs.id = ci.checklist_secao_id
+                   AND cs.checklist_versao_id =
+                       aus.checklist_versao_id
                 WHERE aus.auditoria_versao_id = ?
+                  AND ci.ativo = 1
             `,
             args: [
                 String(auditoria.auditoria_versao_id),
             ],
         });
 
-        const respostas = new Set(
-            respostasResult.rows.map(
-                (resposta) =>
+        const resultadosValidos = new Set([
+            "CONFORME",
+            "PARCIALMENTE_CONFORME",
+            "NAO_CONFORME",
+            "NAO_APLICAVEL",
+        ]);
+
+        const itensAtivos = new Set(
+            itensResult.rows.map(
+                (item) =>
                     `${String(
-                        resposta.auditoria_setor_id
+                        item.auditoria_setor_id
                     )}:${String(
-                        resposta.checklist_item_id
+                        item.checklist_item_id
                     )}`
             )
         );
 
+        const respostas = new Set(
+            respostasResult.rows
+                .filter((resposta) => {
+                    const chave =
+                        `${String(
+                            resposta.auditoria_setor_id
+                        )}:${String(
+                            resposta.checklist_item_id
+                        )}`;
+
+                    return (
+                        resultadosValidos.has(
+                            String(resposta.resultado)
+                        ) &&
+                        itensAtivos.has(chave)
+                    );
+                })
+                .map(
+                    (resposta) =>
+                        `${String(
+                            resposta.auditoria_setor_id
+                        )}:${String(
+                            resposta.checklist_item_id
+                        )}`
+                )
+        );
         /*
          * 6. Verifica exatamente quais itens estão sem resposta.
          */
@@ -190,22 +242,99 @@ export async function POST(
             );
         }
 
-        /*
-         * 7. Não permite uma auditoria sem itens.
-         *
-         * Isso também protege contra uma configuração
-         * inconsistente de checklist.
-         */
-        if (itensResult.rows.length === 0) {
+        const observacoesPendentesResult = await db.execute({
+            sql: `
+                SELECT
+                    ar.id AS resposta_id,
+                    ar.checklist_item_id,
+                    ar.resultado
+                FROM auditoria_respostas ar
+                INNER JOIN auditoria_setores aus
+                    ON aus.id = ar.auditoria_setor_id
+                INNER JOIN checklist_itens ci
+                    ON ci.id = ar.checklist_item_id
+                   AND ci.ativo = 1
+                INNER JOIN checklist_secoes cs
+                    ON cs.id = ci.checklist_secao_id
+                   AND cs.checklist_versao_id =
+                       aus.checklist_versao_id
+                WHERE aus.auditoria_versao_id = ?
+                  AND ar.resultado IN (
+                      'PARCIALMENTE_CONFORME',
+                      'NAO_CONFORME'
+                  )
+                  AND TRIM(COALESCE(ar.observacao, '')) = ''
+            `,
+            args: [
+                String(auditoria.auditoria_versao_id),
+            ],
+        });
+
+        if (observacoesPendentesResult.rows.length > 0) {
             return NextResponse.json(
                 {
                     success: false,
                     message:
-                        "A auditoria não possui itens de checklist para responder.",
+                        "Não é possível enviar a auditoria: existem itens Parcialmente Conforme ou Não Conforme sem observação.",
+                    pendencias: {
+                        totalSemObservacao:
+                            observacoesPendentesResult.rows.length,
+                    },
                 },
                 { status: 409 }
             );
         }
+
+        /*
+        *7. Verifica se todos os itens Não Conforme
+        * possuem pelo menos uma evidência fotográfica.
+        */
+        const evidenciasPendentesResult = await db.execute({
+            sql: `
+                SELECT
+                    ar.id AS resposta_id,
+                    ar.checklist_item_id,
+                    COUNT(e.id) AS total_evidencias
+                FROM auditoria_respostas ar
+                INNER JOIN auditoria_setores aus
+                    ON aus.id = ar.auditoria_setor_id
+                INNER JOIN checklist_itens ci
+                    ON ci.id = ar.checklist_item_id
+                   AND ci.ativo = 1
+                INNER JOIN checklist_secoes cs
+                    ON cs.id = ci.checklist_secao_id
+                   AND cs.checklist_versao_id =
+                       aus.checklist_versao_id
+                LEFT JOIN evidencias e
+                    ON e.resposta_id = ar.id
+                WHERE aus.auditoria_versao_id = ?
+                  AND ar.resultado = 'NAO_CONFORME'
+                GROUP BY
+                    ar.id,
+                    ar.checklist_item_id
+                HAVING COUNT(e.id) < 1
+            `,
+            args: [
+                String(auditoria.auditoria_versao_id),
+            ],
+        });
+
+        if (evidenciasPendentesResult.rows.length > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Não é possível enviar a auditoria: existem itens Não Conforme sem evidência fotográfica.",
+                    pendencias: {
+                        totalItensSemEvidencia:
+                            evidenciasPendentesResult.rows.length,
+                    },
+                },
+                { status: 409 }
+            );
+        }
+
+
         const acaoHistorico =
             String(auditoria.status) === "EM_CORRECAO"
                 ? "REENVIADA"
@@ -215,57 +344,74 @@ export async function POST(
          * 8. Atualiza o status e registra o histórico
          *    em uma única operação de escrita.
          */
-        await db.batch(
-            [
-                {
-                    sql: `
-                        UPDATE auditoria_versoes
-                        SET status = 'ENVIADA',
-                            enviada_em = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                            AND status IN ('ABERTA', 'EM_CORRECAO')
-                    `,
-                    args: [
-                        String(
-                            auditoria.auditoria_versao_id
-                        ),
-                    ],
-                },
-                {
-                    sql: `
-                        INSERT INTO auditoria_historico (
-                            id,
-                            auditoria_id,
-                            usuario_id,
-                            acao,
-                            detalhes
-                        )
-                        VALUES (?, ?, ?, ?, ?)
-                    `,
-                    args: [
-                        crypto.randomUUID(),
-                        String(id),
-                        String(usuario.id),
-                        acaoHistorico,
-                        JSON.stringify({
-                            auditoriaVersaoId:
-                                String(
-                                    auditoria.auditoria_versao_id
-                                ),
-                            versaoNumero:
-                                Number(
-                                    auditoria.versao_numero
-                                ),
-                            totalItens:
-                                itensResult.rows.length,
-                            totalRespondidos:
-                                respostas.size,
-                        }),
-                    ],
-                },
-            ],
-            "write"
-        );
+        const transacao = await db.transaction("write");
+
+        try {
+            const atualizacao = await transacao.execute({
+                sql: `
+            UPDATE auditoria_versoes
+            SET status = 'ENVIADA',
+                enviada_em = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND status IN ('ABERTA', 'EM_CORRECAO')
+        `,
+                args: [
+                    String(auditoria.auditoria_versao_id),
+                ],
+            });
+
+            if (atualizacao.rowsAffected !== 1) {
+                await transacao.rollback();
+
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A auditoria já foi alterada. Atualize a página antes de tentar novamente.",
+                    },
+                    { status: 409 }
+                );
+            }
+
+            await transacao.execute({
+                sql: `
+            INSERT INTO auditoria_historico (
+                id,
+                auditoria_id,
+                usuario_id,
+                acao,
+                detalhes
+            )
+            VALUES (?, ?, ?, ?, ?)
+        `,
+                args: [
+                    crypto.randomUUID(),
+                    String(id),
+                    String(usuario.id),
+                    acaoHistorico,
+                    JSON.stringify({
+                        auditoriaVersaoId:
+                            String(auditoria.auditoria_versao_id),
+                        versaoNumero:
+                            Number(auditoria.versao_numero),
+                        totalItens:
+                            itensResult.rows.length,
+                        totalRespondidos:
+                            respostas.size,
+                    }),
+                ],
+            });
+
+            await transacao.commit();
+        } catch (error) {
+            try {
+                await transacao.rollback();
+            } catch {
+                // Preserva o erro original da transação.
+            }
+
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,
