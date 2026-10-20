@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-permission";
 import {
+    calcularResultados,
+    type ResultadoAuditoria,
+    type RespostaParaCalculo,
+    type ResultadoPontuacao,
+} from "@/lib/auditorias/calcular-resultados";
+import {
     forbiddenResponse,
     unauthorizedResponse,
 } from "@/lib/auth/auth-response";
@@ -187,7 +193,14 @@ export async function GET(
         });
 
         const setores = [];
+        const resultadosPorSetor: ResultadoPontuacao[] = [];
 
+        const RESULTADOS_VALIDOS = new Set<ResultadoAuditoria>([
+            "CONFORME",
+            "PARCIALMENTE_CONFORME",
+            "NAO_CONFORME",
+            "NAO_APLICAVEL",
+        ]);
         for (const setor of setoresResult.rows) {
             const secoesResult = await db.execute({
                 sql: `
@@ -205,6 +218,8 @@ export async function GET(
                 `,
                 args: [setor.checklist_versao_id],
             });
+
+            const itensParaCalculo: RespostaParaCalculo[] = [];
 
             const secoes = [];
 
@@ -239,6 +254,27 @@ export async function GET(
                         secao.id,
                     ],
                 });
+
+                itensParaCalculo.push(
+                    ...itensResult.rows.map((item) => {
+                        const resultadoBruto =
+                            item.resposta_resultado === null ||
+                                item.resposta_resultado === undefined
+                                ? null
+                                : String(item.resposta_resultado);
+
+                        return {
+                            checklist_item_id: String(item.id),
+                            resultado:
+                                resultadoBruto !== null &&
+                                    RESULTADOS_VALIDOS.has(
+                                        resultadoBruto as ResultadoAuditoria
+                                    )
+                                    ? (resultadoBruto as ResultadoAuditoria)
+                                    : null,
+                        };
+                    })
+                );
 
                 secoes.push({
                     id: String(secao.id),
@@ -306,6 +342,10 @@ export async function GET(
                     })),
                 });
             }
+            const resultadosSetor =
+                calcularResultados(itensParaCalculo);
+
+            resultadosPorSetor.push(resultadosSetor);
 
             setores.push({
                 auditoria_setor_id: String(
@@ -323,7 +363,46 @@ export async function GET(
                 checklist_nome: String(setor.checklist_nome),
                 ordem: Number(setor.ordem),
                 secoes,
+                resultados: resultadosSetor,
             });
+        }
+
+        const resultadosGerais: ResultadoPontuacao = {
+            totalItens: 0,
+            totalRespondidos: 0,
+            totalConformes: 0,
+            totalParcialmenteConformes: 0,
+            totalNaoConformes: 0,
+            totalNaoAplicaveis: 0,
+            totalPendentes: 0,
+            pontosObtidos: 0,
+            maximoAplicavel: 0,
+            percentual: null,
+            alertaAbaixoDe60: false,
+        };
+
+        for (const resultado of resultadosPorSetor) {
+            resultadosGerais.totalItens += resultado.totalItens;
+            resultadosGerais.totalRespondidos += resultado.totalRespondidos;
+            resultadosGerais.totalConformes += resultado.totalConformes;
+            resultadosGerais.totalParcialmenteConformes +=
+                resultado.totalParcialmenteConformes;
+            resultadosGerais.totalNaoConformes +=
+                resultado.totalNaoConformes;
+            resultadosGerais.totalNaoAplicaveis +=
+                resultado.totalNaoAplicaveis;
+            resultadosGerais.totalPendentes += resultado.totalPendentes;
+            resultadosGerais.pontosObtidos += resultado.pontosObtidos;
+            resultadosGerais.maximoAplicavel += resultado.maximoAplicavel;
+        }
+
+        if (resultadosGerais.maximoAplicavel > 0) {
+            resultadosGerais.percentual =
+                (resultadosGerais.pontosObtidos /
+                    resultadosGerais.maximoAplicavel) * 100;
+
+            resultadosGerais.alertaAbaixoDe60 =
+                resultadosGerais.percentual < 60;
         }
 
         return NextResponse.json({
@@ -398,6 +477,7 @@ export async function GET(
                 },
 
                 setores,
+                resultados: resultadosGerais,
             },
         });
     } catch (error) {
