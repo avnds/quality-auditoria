@@ -4,6 +4,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+    calcularResultados,
+    type RespostaParaCalculo,
+    type ResultadoPontuacao,
+} from "@/lib/auditorias/calcular-resultados";
 
 
 type Resultado =
@@ -75,6 +80,22 @@ type Auditoria = {
     };
     setores: Setor[];
 };
+
+function calcularPontuacaoItens(
+    itens: Item[],
+    respostasAtuais: Record<string, Resultado>
+): ResultadoPontuacao {
+    const itensParaCalculo: RespostaParaCalculo[] =
+        itens.map((item) => ({
+            checklist_item_id: item.id,
+            resultado:
+                respostasAtuais[item.id] ??
+                item.resposta?.resultado ??
+                null,
+        }));
+
+    return calcularResultados(itensParaCalculo);
+}
 
 export default function ExecucaoAuditoriaPage() {
     const params = useParams();
@@ -1099,6 +1120,33 @@ export default function ExecucaoAuditoriaPage() {
         }));
     }
 
+    const itensAuditoria = auditoria.setores.flatMap(
+        (setor) =>
+            setor.secoes.flatMap((secao) => secao.itens)
+    );
+
+    const resultadosGerais = calcularPontuacaoItens(
+        itensAuditoria,
+        respostas
+    );
+
+    const resultadosSetores = auditoria.setores.map(
+        (setor) => {
+            const itensSetor = setor.secoes.flatMap(
+                (secao) => secao.itens
+            );
+
+            return {
+                id: setor.auditoria_setor_id,
+                nome: setor.setor_nome,
+                resultado: calcularPontuacaoItens(
+                    itensSetor,
+                    respostas
+                ),
+            };
+        }
+    );
+
 
     return (
         <main className="min-h-screen bg-gray-50 p-6">
@@ -1240,6 +1288,91 @@ export default function ExecucaoAuditoriaPage() {
                         </div>
                     </div>
                 </section>
+
+                {/* RESULTADO GERAL DA AUDITORIA */}
+                <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-[#12223f]">
+                        Resultado Geral da Auditoria
+                    </h2>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-lg bg-gray-50 p-4">
+                            <p className="text-sm text-gray-500">
+                                Percentual obtido
+                            </p>
+                            <p className="mt-1 text-2xl font-bold text-[#22365b]">
+                                {resultadosGerais.percentual === null
+                                    ? "—"
+                                    : `${resultadosGerais.percentual.toFixed(2).replace(".", ",")}%`}
+                            </p>
+                        </div>
+
+                        <div className="rounded-lg bg-gray-50 p-4">
+                            <p className="text-sm text-gray-500">
+                                Pontos obtidos
+                            </p>
+                            <p className="mt-1 text-2xl font-bold text-[#22365b]">
+                                {resultadosGerais.pontosObtidos} /{" "}
+                                {resultadosGerais.maximoAplicavel}
+                            </p>
+                        </div>
+
+                        <div className="rounded-lg bg-gray-50 p-4">
+                            <p className="text-sm text-gray-500">
+                                Itens respondidos
+                            </p>
+                            <p className="mt-1 text-2xl font-bold text-[#22365b]">
+                                {resultadosGerais.totalRespondidos} /{" "}
+                                {resultadosGerais.totalItens}
+                            </p>
+                        </div>
+
+                        <div className="rounded-lg bg-gray-50 p-4">
+                            <p className="text-sm text-gray-500">
+                                Itens pendentes
+                            </p>
+                            <p className="mt-1 text-2xl font-bold text-[#22365b]">
+                                {resultadosGerais.totalPendentes}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                        <span className="rounded-full bg-green-100 px-3 py-1 font-medium text-green-800">
+                            Conformes: {resultadosGerais.totalConformes}
+                        </span>
+
+                        <span className="rounded-full bg-yellow-100 px-3 py-1 font-medium text-yellow-800">
+                            Parciais: {resultadosGerais.totalParcialmenteConformes}
+                        </span>
+
+                        <span className="rounded-full bg-red-100 px-3 py-1 font-medium text-red-800">
+                            Não conformes: {resultadosGerais.totalNaoConformes}
+                        </span>
+
+                        <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700">
+                            Não aplicáveis: {resultadosGerais.totalNaoAplicaveis}
+                        </span>
+                    </div>
+
+                    {resultadosGerais.alertaAbaixoDe60 && (
+                        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                            <p className="font-semibold text-red-800">
+                                Atenção: resultado abaixo de 60%
+                            </p>
+                            <p className="mt-1 text-sm text-red-700">
+                                O percentual atual está abaixo do limite de referência.
+                            </p>
+                        </div>
+                    )}
+
+                    {resultadosGerais.percentual === null && (
+                        <p className="mt-4 text-sm text-gray-500">
+                            O percentual será calculado quando houver itens aplicáveis respondidos.
+                        </p>
+                    )}
+                </section>
+
                 {auditoria.versao.status === "EM_CORRECAO" && (
                     <section className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
                         <h2 className="text-lg font-bold text-amber-900">
@@ -1284,6 +1417,52 @@ export default function ExecucaoAuditoriaPage() {
                                     }
                                     className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
                                 >
+
+                                    {(() => {
+                                        const resultadoSetor = resultadosSetores.find(
+                                            (resultado) =>
+                                                resultado.id === setor.auditoria_setor_id
+                                        )?.resultado;
+
+                                        if (!resultadoSetor) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <div className="border-b border-gray-200 px-6 py-3">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">
+                                                            Resultado do setor
+                                                        </p>
+
+                                                        <p className="text-lg font-bold text-[#22365b]">
+                                                            {resultadoSetor.percentual === null
+                                                                ? "Sem pontuação"
+                                                                : `${resultadoSetor.percentual.toFixed(2).replace(".", ",")}%`}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="text-sm text-gray-600">
+                                                        <p>
+                                                            Pontos: {resultadoSetor.pontosObtidos} /{" "}
+                                                            {resultadoSetor.maximoAplicavel}
+                                                        </p>
+                                                        <p>
+                                                            Respondidos: {resultadoSetor.totalRespondidos} de{" "}
+                                                            {resultadoSetor.totalItens}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {resultadoSetor.alertaAbaixoDe60 && (
+                                                    <p className="mt-2 text-sm font-semibold text-red-700">
+                                                        Atenção: setor abaixo de 60%.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                     {/* CABEÇALHO DO SETOR */}
                                     <button
                                         type="button"
