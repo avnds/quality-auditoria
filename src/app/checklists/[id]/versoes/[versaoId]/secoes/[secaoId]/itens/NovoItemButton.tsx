@@ -30,6 +30,7 @@ export default function NovoItemButton({
     const [erro, setErro] = useState("");
     const [modo, setModo] = useState<"novo" | "catalogo">("novo");
     const [catalogoItemId, setCatalogoItemId] = useState("");
+    const [itemVencimento, setItemVencimento] = useState(false);
 
     async function abrirModal() {
         setErro("");
@@ -38,6 +39,7 @@ export default function NovoItemButton({
         setOrdem("");
         setCatalogoItemId("");
         setModo("novo");
+        setItemVencimento(false);
         setAberto(true);
         setCarregandoOrdem(true);
 
@@ -51,7 +53,7 @@ export default function NovoItemButton({
             if (!response.ok) {
                 throw new Error(
                     data?.message ||
-                        "Não foi possível obter a próxima ordem."
+                    "Não foi possível obter a próxima ordem."
                 );
             }
 
@@ -121,6 +123,7 @@ export default function NovoItemButton({
                                 : undefined,
                         orientacao: orientacaoLimpa,
                         ordem: ordemNumero,
+                        item_vencimento: itemVencimento,
                     }),
                 }
             );
@@ -130,7 +133,7 @@ export default function NovoItemButton({
             if (!response.ok) {
                 setErro(
                     data?.message ||
-                        "Não foi possível criar o item."
+                    "Não foi possível criar o item."
                 );
                 return;
             }
@@ -178,11 +181,10 @@ export default function NovoItemButton({
                                         setCatalogoItemId("");
                                     }}
                                     disabled={salvando}
-                                    className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
-                                        modo === "novo"
+                                    className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${modo === "novo"
                                             ? "bg-[#22365b] text-white"
                                             : "text-slate-600 hover:bg-slate-50"
-                                    }`}
+                                        }`}
                                 >
                                     Criar novo
                                 </button>
@@ -195,11 +197,10 @@ export default function NovoItemButton({
                                         setTexto("");
                                     }}
                                     disabled={salvando}
-                                    className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
-                                        modo === "catalogo"
+                                    className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${modo === "catalogo"
                                             ? "bg-[#22365b] text-white"
                                             : "text-slate-600 hover:bg-slate-50"
-                                    }`}
+                                        }`}
                                 >
                                     Reutilizar do catálogo
                                 </button>
@@ -290,6 +291,28 @@ export default function NovoItemButton({
                             </div>
 
                             <div>
+
+                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={itemVencimento}
+                                        onChange={(event) =>
+                                            setItemVencimento(event.target.checked)
+                                        }
+                                        disabled={salvando}
+                                        className="mt-1 h-4 w-4 accent-[#22365b]"
+                                    />
+
+                                    <span>
+                                        <span className="block text-sm font-semibold text-slate-700">
+                                            Item de validade
+                                        </span>
+                                        <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                            Marque quando uma resposta “Não Conforme” neste item
+                                            deverá reduzir em 30 pontos percentuais a nota da seção.
+                                        </span>
+                                    </span>
+                                </label>
                                 <label
                                     htmlFor="ordem"
                                     className="mb-1.5 block text-sm font-medium text-slate-700"

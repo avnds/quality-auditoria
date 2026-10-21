@@ -60,7 +60,7 @@ async function validarSecao(
         secao_nome: String(row.secao_nome),
         secao_descricao:
             row.secao_descricao === null ||
-            row.secao_descricao === undefined
+                row.secao_descricao === undefined
                 ? null
                 : String(row.secao_descricao),
         secao_ordem: Number(row.secao_ordem),
@@ -116,7 +116,8 @@ export async function GET(
                     texto,
                     orientacao,
                     ordem,
-                    ativo
+                    ativo,
+                    item_vencimento
                 FROM checklist_itens
                 WHERE checklist_secao_id = ?
                 ORDER BY ordem ASC
@@ -148,11 +149,16 @@ export async function GET(
             texto: String(row.texto),
             orientacao:
                 row.orientacao === null ||
-                row.orientacao === undefined
+                    row.orientacao === undefined
                     ? null
                     : String(row.orientacao),
             ordem: Number(row.ordem),
             ativo: Number(row.ativo) === 1,
+            item_vencimento:
+                row.item_vencimento === null ||
+                    row.item_vencimento === undefined
+                    ? null
+                    : Number(row.item_vencimento),
         }));
 
         return NextResponse.json({
@@ -266,6 +272,32 @@ export async function POST(
                 ? body.orientacao.trim()
                 : "";
 
+        const itemVencimento =
+            body.item_vencimento === undefined ||
+                body.item_vencimento === null
+                ? null
+                : body.item_vencimento === true ||
+                    body.item_vencimento === 1
+                    ? 1
+                    : body.item_vencimento === false ||
+                        body.item_vencimento === 0
+                        ? 0
+                        : null;
+
+        if (
+            body.item_vencimento !== undefined &&
+            body.item_vencimento !== null &&
+            ![true, false, 0, 1].includes(body.item_vencimento)
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "O campo item_vencimento deve ser verdadeiro ou falso.",
+                },
+                { status: 400 }
+            );
+        }
+
         const ordem =
             typeof body.ordem === "number"
                 ? body.ordem
@@ -349,17 +381,18 @@ export async function POST(
 
         await db.execute({
             sql: `
-                INSERT INTO checklist_itens (
-                    id,
-                    checklist_secao_id,
-                    texto,
-                    orientacao,
-                    ordem,
-                    ativo,
-                    catalogo_item_id
-                )
-                VALUES (?, ?, ?, ?, ?, 1, ?)
-            `,
+        INSERT INTO checklist_itens (
+            id,
+            checklist_secao_id,
+            texto,
+            orientacao,
+            ordem,
+            ativo,
+            catalogo_item_id,
+            item_vencimento
+        )
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+    `,
             args: [
                 itemId,
                 secaoId,
@@ -367,6 +400,7 @@ export async function POST(
                 orientacao || null,
                 ordem,
                 catalogoItemId || null,
+                itemVencimento,
             ],
         });
 
@@ -383,6 +417,7 @@ export async function POST(
                     ativo: true,
                     catalogo_item_id:
                         catalogoItemId || null,
+                    item_vencimento: itemVencimento,
                 },
             },
             { status: 201 }

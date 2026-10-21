@@ -232,6 +232,7 @@ export async function GET(
                             ci.orientacao,
                             ci.ordem,
                             ci.ativo,
+                            ci.item_vencimento,
 
                             ar.id AS resposta_id,
                             ar.resultado AS resposta_resultado,
@@ -263,6 +264,7 @@ export async function GET(
                                 ? null
                                 : String(item.resposta_resultado);
 
+
                         return {
                             checklist_item_id: String(item.id),
                             resultado:
@@ -272,6 +274,11 @@ export async function GET(
                                     )
                                     ? (resultadoBruto as ResultadoAuditoria)
                                     : null,
+                            item_vencimento:
+                                item.item_vencimento === null ||
+                                    item.item_vencimento === undefined
+                                    ? null
+                                    : Number(item.item_vencimento),
                         };
                     })
                 );
@@ -296,6 +303,11 @@ export async function GET(
                                 : String(item.orientacao),
                         ordem: Number(item.ordem),
                         ativo: Number(item.ativo) === 1,
+                        item_vencimento:
+                            item.item_vencimento === null ||
+                                item.item_vencimento === undefined
+                                ? null
+                                : Number(item.item_vencimento),
 
                         resposta:
                             item.resposta_id === null ||
@@ -396,10 +408,26 @@ export async function GET(
             resultadosGerais.maximoAplicavel += resultado.maximoAplicavel;
         }
 
-        if (resultadosGerais.maximoAplicavel > 0) {
+        let somaPercentuaisPonderados = 0;
+        let denominadorPercentuais = 0;
+
+        for (const resultado of resultadosPorSetor) {
+            if (
+                resultado.percentual === null ||
+                resultado.maximoAplicavel <= 0
+            ) {
+                continue;
+            }
+
+            somaPercentuaisPonderados +=
+                resultado.percentual * resultado.maximoAplicavel;
+
+            denominadorPercentuais += resultado.maximoAplicavel;
+        }
+
+        if (denominadorPercentuais > 0) {
             resultadosGerais.percentual =
-                (resultadosGerais.pontosObtidos /
-                    resultadosGerais.maximoAplicavel) * 100;
+                somaPercentuaisPonderados / denominadorPercentuais;
 
             resultadosGerais.alertaAbaixoDe60 =
                 resultadosGerais.percentual < 60;

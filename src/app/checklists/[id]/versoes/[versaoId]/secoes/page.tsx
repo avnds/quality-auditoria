@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovaSecaoButton from "./NovaSecaoButton";
+import ExcluirSecaoButton from "./ExcluirSecaoButton";
 
 type SecoesPageProps = {
     params: Promise<{
@@ -102,6 +103,11 @@ export default async function SecoesPage({
     const podeGerenciar =
         usuario.perfil === "MASTER" ||
         usuario.perfil === "SUPERVISORA";
+
+    const podeExcluirSecao =
+        podeGerenciar &&
+        Number(versao.checklist_ativo) === 1 &&
+        Number(versao.publicada) !== 1;
 
     return (
         <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -210,12 +216,23 @@ export default async function SecoesPage({
                                         </div>
                                     </div>
 
-                                    <Link
-                                        href={`/checklists/${id}/versoes/${versaoId}/secoes/${secao.id}/itens`}
-                                        className="rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
-                                    >
-                                        Itens
-                                    </Link>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Link
+                                            href={`/checklists/${id}/versoes/${versaoId}/secoes/${secao.id}/itens`}
+                                            className="rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
+                                        >
+                                            Itens
+                                        </Link>
+
+                                        {podeExcluirSecao && (
+                                            <ExcluirSecaoButton
+                                                checklistId={id}
+                                                versaoId={versaoId}
+                                                secaoId={secao.id}
+                                                nomeSecao={secao.nome}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>

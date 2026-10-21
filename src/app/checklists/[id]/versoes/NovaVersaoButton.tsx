@@ -13,11 +13,13 @@ export default function NovaVersaoButton({
     const [descricao, setDescricao] = useState("");
     const [salvando, setSalvando] = useState(false);
     const [erro, setErro] = useState("");
+    const [modo, setModo] = useState<"copiar" | "vazia">("copiar");
 
     function abrir() {
         setDescricao("");
         setErro("");
         setAberto(true);
+        setModo("copiar");
     }
 
     function fechar() {
@@ -45,6 +47,7 @@ export default function NovaVersaoButton({
                     },
                     body: JSON.stringify({
                         descricao: descricao.trim() || null,
+                        modo,
                     }),
                 }
             );
@@ -54,7 +57,7 @@ export default function NovaVersaoButton({
             if (!response.ok) {
                 setErro(
                     data.message ||
-                        "Não foi possível criar a versão. Tente novamente."
+                    "Não foi possível criar a versão. Tente novamente."
                 );
                 return;
             }
@@ -111,6 +114,53 @@ export default function NovaVersaoButton({
                             >
                                 Descrição da versão
                             </label>
+
+                            <div className="mt-6">
+                                <p className="mb-3 text-sm font-semibold text-slate-700">
+                                    Como deseja iniciar a versão?
+                                </p>
+
+                                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                                    <input
+                                        type="radio"
+                                        name="modo-versao"
+                                        value="copiar"
+                                        checked={modo === "copiar"}
+                                        onChange={() => setModo("copiar")}
+                                        className="mt-1"
+                                    />
+
+                                    <span>
+                                        <span className="block text-sm font-semibold text-slate-800">
+                                            Copiar versão anterior
+                                        </span>
+                                        <span className="mt-1 block text-sm text-slate-500">
+                                            Reutiliza as seções e os itens existentes, que poderão ser
+                                            ajustados na nova versão.
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                                    <input
+                                        type="radio"
+                                        name="modo-versao"
+                                        value="vazia"
+                                        checked={modo === "vazia"}
+                                        onChange={() => setModo("vazia")}
+                                        className="mt-1"
+                                    />
+
+                                    <span>
+                                        <span className="block text-sm font-semibold text-slate-800">
+                                            Começar do zero
+                                        </span>
+                                        <span className="mt-1 block text-sm text-slate-500">
+                                            Cria a versão sem seções e sem itens.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
 
                             <textarea
                                 id="descricao-versao"

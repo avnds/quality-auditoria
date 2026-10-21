@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovoItemButton from "./NovoItemButton";
 import EditarItemButton from "./EditarItemButton";
+import ExcluirItemButton from "./ExcluirItemButton";
 
 type ItensPageProps = {
     params: Promise<{
@@ -74,7 +75,8 @@ export default async function ItensPage({
                 texto,
                 orientacao,
                 ordem,
-                ativo
+                ativo,
+                item_vencimento
             FROM checklist_itens
             WHERE checklist_secao_id = ?
             ORDER BY ordem ASC
@@ -87,11 +89,16 @@ export default async function ItensPage({
         texto: String(row.texto),
         orientacao:
             row.orientacao === null ||
-            row.orientacao === undefined
+                row.orientacao === undefined
                 ? null
                 : String(row.orientacao),
         ordem: Number(row.ordem),
         ativo: Number(row.ativo) === 1,
+        item_vencimento:
+            row.item_vencimento === null ||
+                row.item_vencimento === undefined
+                ? null
+                : Number(row.item_vencimento),
     }));
 
     const catalogoItensResult = await db.execute({
@@ -237,13 +244,26 @@ export default async function ItensPage({
                                         </div>
                                     </div>
 
-                                                                        {podeGerenciar && (
-                                        <EditarItemButton
-                                            checklistId={id}
-                                            versaoId={versaoId}
-                                            secaoId={secaoId}
-                                            item={item}
-                                        />
+                                    {podeGerenciar && (
+                                        <div className="flex flex-wrap items-start gap-2">
+                                            <EditarItemButton
+                                                checklistId={id}
+                                                versaoId={versaoId}
+                                                secaoId={secaoId}
+                                                item={item}
+                                            />
+
+                                            {Number(secao.checklist_ativo) === 1 &&
+                                                Number(secao.publicada) !== 1 && (
+                                                    <ExcluirItemButton
+                                                        checklistId={id}
+                                                        versaoId={versaoId}
+                                                        secaoId={secaoId}
+                                                        itemId={item.id}
+                                                        textoItem={item.texto}
+                                                    />
+                                                )}
+                                        </div>
                                     )}
                                 </div>
                             ))}
