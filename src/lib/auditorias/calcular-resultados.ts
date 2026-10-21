@@ -7,6 +7,7 @@ export type ResultadoAuditoria =
 export type RespostaParaCalculo = {
     checklist_item_id: string;
     resultado: ResultadoAuditoria | null;
+    item_vencimento: number | null;
 };
 
 export type ResultadoPontuacao = {
@@ -40,9 +41,16 @@ export function calcularResultados(
     let totalNaoAplicaveis = 0;
     let pontosObtidos = 0;
     let maximoAplicavel = 0;
+    let temItemValidadeNaoConforme = false;
 
     for (const item of itens) {
         const resultado = item.resultado;
+        if (
+            Number(item.item_vencimento) === 1 &&
+            resultado === "NAO_CONFORME"
+        ) {
+            temItemValidadeNaoConforme = true;
+        }
 
         if (
             resultado === null ||
@@ -80,10 +88,19 @@ export function calcularResultados(
     const totalItens = itens.length;
     const totalPendentes = totalItens - totalRespondidos;
 
-    const percentual =
+    const percentualNormal =
         maximoAplicavel > 0
             ? (pontosObtidos / maximoAplicavel) * 100
             : null;
+
+    const percentual =
+        percentualNormal === null
+            ? null
+            : Math.max(
+                0,
+                percentualNormal -
+                (temItemValidadeNaoConforme ? 30 : 0)
+            );
 
     return {
         totalItens,

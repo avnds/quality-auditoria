@@ -11,8 +11,9 @@ type EditarItemButtonProps = {
         texto: string;
         orientacao: string | null;
         ordem: number;
+        item_vencimento: number | null;
     };
-    
+
 };
 
 export default function EditarItemButton({
@@ -20,7 +21,7 @@ export default function EditarItemButton({
     versaoId,
     secaoId,
     item,
-    
+
 }: EditarItemButtonProps) {
     const [aberto, setAberto] = useState(false);
     const [texto, setTexto] = useState(item.texto);
@@ -28,6 +29,10 @@ export default function EditarItemButton({
     const [ordem, setOrdem] = useState(String(item.ordem));
     const [salvando, setSalvando] = useState(false);
     const [erro, setErro] = useState("");
+    const [itemVencimento, setItemVencimento] = useState(
+        Number(item.item_vencimento) === 1
+    );
+
 
     function abrir() {
         setTexto(item.texto);
@@ -35,6 +40,7 @@ export default function EditarItemButton({
         setOrdem(String(item.ordem));
         setErro("");
         setAberto(true);
+        setItemVencimento(Number(item.item_vencimento) === 1);
     }
 
     async function handleSalvar(event: React.FormEvent<HTMLFormElement>) {
@@ -68,6 +74,7 @@ export default function EditarItemButton({
                         texto: textoLimpo,
                         orientacao: orientacao.trim(),
                         ordem: ordemNumero,
+                        item_vencimento: itemVencimento,
                     }),
                 }
             );
@@ -77,7 +84,7 @@ export default function EditarItemButton({
             if (!resposta.ok) {
                 setErro(
                     dados.message ||
-                        "Não foi possível editar o item."
+                    "Não foi possível editar o item."
                 );
                 return;
             }
@@ -177,6 +184,28 @@ export default function EditarItemButton({
                             </div>
 
                             <div>
+
+                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={itemVencimento}
+                                        onChange={(event) =>
+                                            setItemVencimento(event.target.checked)
+                                        }
+                                        disabled={salvando}
+                                        className="mt-1 h-4 w-4 accent-[#22365b]"
+                                    />
+
+                                    <span>
+                                        <span className="block text-sm font-semibold text-slate-700">
+                                            Item de validade
+                                        </span>
+                                        <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                            Marque quando uma resposta “Não Conforme” neste item
+                                            deverá reduzir em 30 pontos percentuais a nota da seção.
+                                        </span>
+                                    </span>
+                                </label>
                                 <label
                                     htmlFor={`editar-item-ordem-${item.id}`}
                                     className="mb-1.5 block text-sm font-semibold text-slate-700"

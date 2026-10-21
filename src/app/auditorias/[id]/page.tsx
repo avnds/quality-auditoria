@@ -29,6 +29,7 @@ type Item = {
     orientacao: string | null;
     ordem: number;
     ativo: boolean;
+    item_vencimento: number | null;
     resposta: {
         id: string;
         resultado: Resultado | null;
@@ -88,6 +89,7 @@ function calcularPontuacaoItens(
     const itensParaCalculo: RespostaParaCalculo[] =
         itens.map((item) => ({
             checklist_item_id: item.id,
+            item_vencimento: item.item_vencimento,
             resultado:
                 respostasAtuais[item.id] ??
                 item.resposta?.resultado ??

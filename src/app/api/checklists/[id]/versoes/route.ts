@@ -157,6 +157,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         }
 
         const body = await request.json();
+        const modo =
+            body.modo === "vazia" ? "vazia" : "copiar";
 
         const descricaoInformada =
             typeof body.descricao === "string"
@@ -193,6 +195,43 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
                 ? null
                 : String(ultimaVersaoRow.descricao));
 
+
+        if (modo === "vazia" && ultimaVersaoRow !== undefined) {
+            await db.execute({
+                sql: `
+            INSERT INTO checklist_versoes (
+                id,
+                checklist_id,
+                numero,
+                descricao,
+                publicada
+            )
+            VALUES (?, ?, ?, ?, 0)
+        `,
+                args: [
+                    versaoId,
+                    id,
+                    proximoNumero,
+                    descricao,
+                ],
+            });
+
+            return NextResponse.json(
+                {
+                    message: "Versão vazia criada com sucesso.",
+                    versao: {
+                        id: versaoId,
+                        checklist_id: id,
+                        numero: proximoNumero,
+                        descricao,
+                        publicada: false,
+                    },
+                    secoes_clonadas: 0,
+                    itens_clonados: 0,
+                },
+                { status: 201 }
+            );
+        }
         /*
          * Primeira versão:
          * cria apenas a versão, sem seções e itens.
@@ -329,12 +368,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             const itensAnteriores = await db.execute({
                 sql: `
                     SELECT
-                        texto,
-                        orientacao,
-                        ordem,
-                        ativo,
-                        catalogo_item_id
-                    FROM checklist_itens
+    texto,
+    orientacao,
+    ordem,
+    ativo,
+    catalogo_item_id,
+    item_vencimento
+FROM checklist_itens
                     WHERE checklist_secao_id = ?
                     ORDER BY ordem ASC
                 `,
@@ -347,15 +387,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
                 statements.push({
                     sql: `
                         INSERT INTO checklist_itens (
-                            id,
-                            checklist_secao_id,
-                            texto,
-                            orientacao,
-                            ordem,
-                            ativo,
-                            catalogo_item_id
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+    id,
+    checklist_secao_id,
+    texto,
+    orientacao,
+    ordem,
+    ativo,
+    catalogo_item_id,
+    item_vencimento
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     `,
                     args: [
                         novoItemId,
@@ -371,6 +412,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
                             item.catalogo_item_id === undefined
                             ? null
                             : String(item.catalogo_item_id),
+                        item.item_vencimento === null ||
+                            item.item_vencimento === undefined
+                            ? null
+                            : Number(item.item_vencimento),
                     ],
                 });
 
