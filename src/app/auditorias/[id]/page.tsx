@@ -1122,16 +1122,6 @@ export default function ExecucaoAuditoriaPage() {
         }));
     }
 
-    const itensAuditoria = auditoria.setores.flatMap(
-        (setor) =>
-            setor.secoes.flatMap((secao) => secao.itens)
-    );
-
-    const resultadosGerais = calcularPontuacaoItens(
-        itensAuditoria,
-        respostas
-    );
-
     const resultadosSetores = auditoria.setores.map(
         (setor) => {
             const itensSetor = setor.secoes.flatMap(
@@ -1148,6 +1138,58 @@ export default function ExecucaoAuditoriaPage() {
             };
         }
     );
+
+    const resultadosGerais: ResultadoPontuacao = {
+        totalItens: 0,
+        totalRespondidos: 0,
+        totalConformes: 0,
+        totalParcialmenteConformes: 0,
+        totalNaoConformes: 0,
+        totalNaoAplicaveis: 0,
+        totalPendentes: 0,
+        pontosObtidos: 0,
+        maximoAplicavel: 0,
+        percentual: null,
+        alertaAbaixoDe60: false,
+    };
+
+    let somaPercentuaisPonderados = 0;
+    let denominadorPercentuais = 0;
+
+    for (const setor of resultadosSetores) {
+        const resultado = setor.resultado;
+
+        resultadosGerais.totalItens += resultado.totalItens;
+        resultadosGerais.totalRespondidos += resultado.totalRespondidos;
+        resultadosGerais.totalConformes += resultado.totalConformes;
+        resultadosGerais.totalParcialmenteConformes +=
+            resultado.totalParcialmenteConformes;
+        resultadosGerais.totalNaoConformes +=
+            resultado.totalNaoConformes;
+        resultadosGerais.totalNaoAplicaveis +=
+            resultado.totalNaoAplicaveis;
+        resultadosGerais.totalPendentes += resultado.totalPendentes;
+        resultadosGerais.pontosObtidos += resultado.pontosObtidos;
+        resultadosGerais.maximoAplicavel += resultado.maximoAplicavel;
+
+        if (
+            resultado.percentual !== null &&
+            resultado.maximoAplicavel > 0
+        ) {
+            somaPercentuaisPonderados +=
+                resultado.percentual * resultado.maximoAplicavel;
+
+            denominadorPercentuais += resultado.maximoAplicavel;
+        }
+    }
+
+    if (denominadorPercentuais > 0) {
+        resultadosGerais.percentual =
+            somaPercentuaisPonderados / denominadorPercentuais;
+
+        resultadosGerais.alertaAbaixoDe60 =
+            resultadosGerais.percentual < 60;
+    }
 
 
     return (
