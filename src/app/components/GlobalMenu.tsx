@@ -17,16 +17,21 @@ const itensMenu: ItemMenu[] = [
         href: "/",
     },
     {
+        nome: "Auditorias",
+        href: "/auditorias",
+        permissao: "auditorias.visualizar",
+    },
+    {
         nome: "Clientes",
         href: "/clientes",
         permissao: "clientes.visualizar",
     },
-
     {
-        nome: "Setores",
-        href: "/setores",
-        permissao: "setores.visualizar",
+        nome: "Catálogo de Itens",
+        href: "/catalogo-itens",
+        //permissao: "catalogo-itens.visualizar",
     },
+    
     {
         nome: "Checklists",
         href: "/checklists",
@@ -37,14 +42,14 @@ const itensMenu: ItemMenu[] = [
         href: "/certificados",
     },
     {
-        nome: "Auditorias",
-        href: "/auditorias",
-        permissao: "auditorias.visualizar",
-    },
-    {
         nome: "Relatórios",
         href: "/relatorios",
         permissao: "relatorios.visualizar",
+    },
+    {
+        nome: "Setores",
+        href: "/setores",
+        permissao: "setores.visualizar",
     },
     {
         nome: "Usuários",
