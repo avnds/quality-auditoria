@@ -43,7 +43,10 @@ export async function GET(
         const args: string[] = [id];
         let filtroLoja = "";
 
-        if (
+        if (usuario.perfil === "CONSULTOR") {
+            filtroLoja = " AND a.auditor_id = ?";
+            args.push(usuario.id);
+        } else if (
             usuario.perfil !== "MASTER" &&
             usuario.perfil !== "SUPERVISORA"
         ) {
