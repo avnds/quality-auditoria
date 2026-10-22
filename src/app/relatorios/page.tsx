@@ -51,7 +51,10 @@ export default async function RelatoriosPage() {
     const args: string[] = [];
     let filtroLoja = "";
 
-    if (
+    if (usuario.perfil === "CONSULTOR") {
+        filtroLoja = " AND a.auditor_id = ?";
+        args.push(usuario.id);
+    } else if (
         usuario.perfil !== "MASTER" &&
         usuario.perfil !== "SUPERVISORA"
     ) {
