@@ -18,13 +18,13 @@ export default function GlobalMenuLinks({
     const pathname = usePathname();
 
     return (
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden flex-wrap items-center gap-x-1 gap-y-1 lg:flex">
             {itens.map((item) => {
                 const ativo =
                     item.href === "/"
                         ? pathname === "/"
                         : pathname === item.href ||
-                          pathname.startsWith(`${item.href}/`);
+                        pathname.startsWith(`${item.href}/`);
 
                 return (
                     <Link

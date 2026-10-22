@@ -9,6 +9,7 @@ type ItemMenu = {
     nome: string;
     href: string;
     permissao?: string;
+    perfisPermitidos?: string[];
 };
 
 const itensMenu: ItemMenu[] = [
@@ -27,11 +28,16 @@ const itensMenu: ItemMenu[] = [
         permissao: "clientes.visualizar",
     },
     {
+        nome: "Catálogo de Seções",
+        href: "/catalogo-secoes",
+        perfisPermitidos: ["MASTER", "SUPERVISORA"],
+    },
+    {
         nome: "Catálogo de Itens",
         href: "/catalogo-itens",
-        //permissao: "catalogo-itens.visualizar",
+        perfisPermitidos: ["MASTER", "SUPERVISORA"],
     },
-    
+
     {
         nome: "Checklists",
         href: "/checklists",
@@ -68,6 +74,15 @@ export default async function GlobalMenu() {
     const itensVisiveis: ItemMenu[] = [];
 
     for (const item of itensMenu) {
+        if (item.perfisPermitidos) {
+            if (!item.perfisPermitidos.includes(usuario.perfil)) {
+                continue;
+            }
+
+            itensVisiveis.push(item);
+            continue;
+        }
+
         if (!item.permissao) {
             itensVisiveis.push(item);
             continue;
