@@ -37,6 +37,8 @@ export default async function AuditoriasPage() {
         session.perfil === "MASTER" ||
         session.perfil === "SUPERVISORA";
 
+    const ehConsultor = session.perfil === "CONSULTOR";
+
     const result = await db.execute({
         sql: `
         SELECT
@@ -56,23 +58,26 @@ export default async function AuditoriasPage() {
             ON u.id = a.auditor_id
         INNER JOIN auditoria_versoes av
             ON av.auditoria_id = a.id
-        ${
-            ehMasterOuSupervisora
-                ? ""
-                : `
+        ${!ehMasterOuSupervisora && !ehConsultor
+                ? `
                     INNER JOIN usuario_lojas ul
                         ON ul.loja_id = a.loja_id
                        AND ul.usuario_id = ?
                 `
-        }
+                : ""
+            }
         WHERE av.numero = (
             SELECT MAX(av2.numero)
             FROM auditoria_versoes av2
             WHERE av2.auditoria_id = a.id
         )
+        ${ehConsultor ? "AND a.auditor_id = ?" : ""}
         ORDER BY a.criada_em DESC
     `,
-        args: ehMasterOuSupervisora ? [] : [session.usuario_id],
+        args:
+            ehMasterOuSupervisora
+                ? []
+                : [session.usuario_id],
     });
 
     const auditorias = result.rows;
