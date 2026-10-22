@@ -325,7 +325,10 @@ export default function ExecucaoAuditoriaPage() {
                                         respondido_em:
                                             item.resposta?.respondido_em ?? null,
                                         evidencias:
-                                            item.resposta?.evidencias ?? [],
+                                            resultado === "CONFORME" ||
+                                                resultado === "NAO_APLICAVEL"
+                                                ? []
+                                                : item.resposta?.evidencias ?? [],
                                     },
                                 };
                             }),

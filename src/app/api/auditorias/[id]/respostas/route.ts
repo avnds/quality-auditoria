@@ -6,6 +6,8 @@ import {
     unauthorizedResponse,
 } from "@/lib/auth/auth-response";
 
+import { del } from "@vercel/blob";
+
 type RouteContext = {
     params: Promise<{
         id: string;
@@ -256,20 +258,83 @@ export async function POST(
                 existenteResult.rows[0].id
             );
 
-            await db.execute({
-                sql: `
-                    UPDATE auditoria_respostas
-                    SET resultado = ?,
-                        observacao = ?,
-                        respondido_em = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                `,
-                args: [
-                    resultado,
-                    observacao || null,
-                    respostaId,
-                ],
-            });
+            const limparEvidencias =
+                resultado === "CONFORME" ||
+                resultado === "NAO_APLICAVEL";
+
+            let evidenciasAntigas: { arquivo_uri: string }[] = [];
+
+            if (limparEvidencias) {
+                const evidenciasResult = await db.execute({
+                    sql: `
+                SELECT arquivo_uri
+                FROM evidencias
+                WHERE resposta_id = ?
+            `,
+                    args: [respostaId],
+                });
+
+                evidenciasAntigas = evidenciasResult.rows.map(
+                    (row) => ({
+                        arquivo_uri: String(row.arquivo_uri),
+                    })
+                );
+
+                // Remove os registros e atualiza a resposta
+                // dentro da mesma transação de escrita.
+                await db.batch(
+                    [
+                        {
+                            sql: `
+                        DELETE FROM evidencias
+                        WHERE resposta_id = ?
+                    `,
+                            args: [respostaId],
+                        },
+                        {
+                            sql: `
+                        UPDATE auditoria_respostas
+                        SET resultado = ?,
+                            observacao = NULL,
+                            respondido_em = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    `,
+                            args: [resultado, respostaId],
+                        },
+                    ],
+                    "write"
+                );
+
+                // Os arquivos são externos ao banco.
+                // Falhas no Blob não devem restaurar evidências
+                // que já foram removidas do banco.
+                for (const evidencia of evidenciasAntigas) {
+                    try {
+                        await del(evidencia.arquivo_uri);
+                    } catch (erro) {
+                        console.error(
+                            "Falha ao excluir evidência do Vercel Blob:",
+                            evidencia.arquivo_uri,
+                            erro
+                        );
+                    }
+                }
+            } else {
+                await db.execute({
+                    sql: `
+                UPDATE auditoria_respostas
+                SET resultado = ?,
+                    observacao = ?,
+                    respondido_em = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `,
+                    args: [
+                        resultado,
+                        observacao || null,
+                        respostaId,
+                    ],
+                });
+            }
 
             return NextResponse.json({
                 success: true,
@@ -278,7 +343,12 @@ export async function POST(
                     auditoriaSetorId,
                     checklistItemId,
                     resultado,
-                    observacao: observacao || null,
+                    observacao: limparEvidencias
+                        ? null
+                        : observacao || null,
+                    evidencias: limparEvidencias
+                        ? []
+                        : undefined,
                 },
                 atualizado: true,
             });
