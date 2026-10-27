@@ -396,7 +396,6 @@ export default function ExecucaoAuditoriaPage() {
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-        input.capture = "environment";
 
         input.onchange = async () => {
             const arquivo = input.files?.[0];
@@ -530,7 +529,6 @@ export default function ExecucaoAuditoriaPage() {
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-        input.capture = "environment";
 
         input.onchange = async () => {
             const arquivo = input.files?.[0];
