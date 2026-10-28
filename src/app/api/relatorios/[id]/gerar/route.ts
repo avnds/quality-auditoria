@@ -151,13 +151,7 @@ function criarDesenhista(
         y = alturaPagina - margem;
     }
 
-    function garantirEspaco(alturaNecessaria: number) {
-        if (y - alturaNecessaria < limiteInferior) {
-            novaPagina();
-        }
-    }
-
-    function escreverLinha(
+    function quebrarTexto(
         texto: string,
         opcoes?: {
             negrito?: boolean;
@@ -165,14 +159,11 @@ function criarDesenhista(
             cor?: Cor;
             recuo?: number;
         }
-    ) {
+    ): string[] {
         const tamanho = opcoes?.tamanho ?? 10;
         const recuo = opcoes?.recuo ?? 0;
         const fonteUsada = opcoes?.negrito ? fonteNegrito : fonte;
-        const cor = opcoes?.cor ?? CORES.preto;
-        const alturaLinha = tamanho + 5;
         const larguraMaxima = larguraUtil - recuo;
-
         const linhas: string[] = [];
         const paragrafo = textoSeguro(texto);
 
@@ -201,8 +192,63 @@ function criarDesenhista(
                 }
             }
 
-            if (linhaAtual) linhas.push(linhaAtual);
+            if (linhaAtual) {
+                linhas.push(linhaAtual);
+            }
         }
+
+        return linhas;
+    }
+
+    function medirAlturaTexto(
+        texto: string,
+        opcoes?: {
+            negrito?: boolean;
+            tamanho?: number;
+            cor?: Cor;
+            recuo?: number;
+        }
+    ): number {
+        const tamanho = opcoes?.tamanho ?? 10;
+        const alturaLinha = tamanho + 5;
+
+        return quebrarTexto(texto, opcoes).length * alturaLinha;
+    }
+
+    function garantirEspaco(alturaNecessaria: number) {
+        if (y - alturaNecessaria < limiteInferior) {
+            novaPagina();
+        }
+    }
+
+    function garantirInicioBloco(alturaNecessaria: number) {
+        const alturaMaximaPagina =
+            alturaPagina - margem - limiteInferior;
+
+        if (
+            alturaNecessaria <= alturaMaximaPagina &&
+            y - alturaNecessaria < limiteInferior
+        ) {
+            novaPagina();
+        }
+    }
+
+    function escreverLinha(
+        texto: string,
+        opcoes?: {
+            negrito?: boolean;
+            tamanho?: number;
+            cor?: Cor;
+            recuo?: number;
+        }
+    ) {
+        const tamanho = opcoes?.tamanho ?? 10;
+        const recuo = opcoes?.recuo ?? 0;
+        const fonteUsada = opcoes?.negrito ? fonteNegrito : fonte;
+        const cor = opcoes?.cor ?? CORES.preto;
+        const alturaLinha = tamanho + 5;
+        const larguraMaxima = larguraUtil - recuo;
+        const linhas = quebrarTexto(texto, opcoes);
 
         for (const linha of linhas) {
             garantirEspaco(alturaLinha);
@@ -251,6 +297,33 @@ function criarDesenhista(
         y -= 31;
     }
 
+    function medirAlturaImagem(
+        imagem: Awaited<ReturnType<PDFDocument["embedJpg"]>>,
+        legenda: string
+    ): number {
+        const maxLargura = Math.min(larguraUtil - 10, 450);
+        const maxAltura = 285;
+        const dimensoes = imagem.scale(1);
+
+        const escala = Math.min(
+            maxLargura / dimensoes.width,
+            maxAltura / dimensoes.height,
+            1
+        );
+
+        const altura = dimensoes.height * escala;
+
+        return (
+            altura +
+            5 +
+            medirAlturaTexto(legenda, {
+                tamanho: 8,
+                recuo: 5,
+            }) +
+            10
+        );
+    }
+
     function desenharImagem(
         imagem: Awaited<ReturnType<PDFDocument["embedJpg"]>>,
         legenda: string
@@ -266,7 +339,7 @@ function criarDesenhista(
 
         const largura = dimensoes.width * escala;
         const altura = dimensoes.height * escala;
-        const alturaTotal = altura + 32;
+        const alturaTotal = medirAlturaImagem(imagem, legenda);
 
         garantirEspaco(alturaTotal);
 
@@ -315,6 +388,9 @@ function criarDesenhista(
         espacamento,
         titulo,
         desenharImagem,
+        medirAlturaTexto,
+        medirAlturaImagem,
+        garantirInicioBloco,
         rodapes,
         getPaginaAtual: () => pagina,
     };
@@ -753,44 +829,15 @@ export async function POST(
                     if (item.resposta?.resultado === "NAO_APLICAVEL") {
                         continue;
                     }
-                    desenho.escreverLinha(
-                        `${item.ordem}. ${item.texto}`,
-                        { negrito: true, recuo: 8 }
-                    );
 
-                    desenho.escreverLinha(
-                        `Resultado: ${formatarResultado(item.resposta?.resultado ?? null)}`,
-                        {
-                            recuo: 16,
-                            cor:
-                                item.resposta?.resultado === "NAO_CONFORME"
-                                    ? CORES.vermelho
-                                    : CORES.preto,
-                        }
-                    );
-
-                    if (item.orientacao) {
-                        desenho.escreverLinha(
-                            `Orientacao: ${item.orientacao}`,
-                            { tamanho: 9, recuo: 16, cor: CORES.cinza }
-                        );
-                    }
-
-                    if (item.resposta?.observacao) {
-                        desenho.escreverLinha(
-                            `Observacao: ${item.resposta.observacao}`,
-                            { recuo: 16 }
-                        );
-                    }
-
-                    if (item.item_vencimento === 1) {
-                        desenho.escreverLinha(
-                            "Item sujeito a vencimento/criterio critico.",
-                            { tamanho: 9, recuo: 16, cor: CORES.vermelho }
-                        );
-                    }
-
-                    desenho.espacamento(5);
+                    const evidenciasPreparadas: Array<{
+                        evidencia: NonNullable<typeof item.resposta>["evidencias"][number];
+                        imagem:
+                        | Awaited<ReturnType<typeof pdf.embedJpg>>
+                        | Awaited<ReturnType<typeof pdf.embedPng>>
+                        | null;
+                        erro: "indisponivel" | "incorporacao" | null;
+                    }> = [];
 
                     for (const evidencia of item.resposta?.evidencias ?? []) {
                         const blob = await get(evidencia.arquivo_uri, {
@@ -798,10 +845,11 @@ export async function POST(
                         });
 
                         if (!blob) {
-                            desenho.escreverLinha(
-                                `Evidencia ${evidencia.ordem}: imagem indisponivel.`,
-                                { tamanho: 9, recuo: 16, cor: CORES.vermelho }
-                            );
+                            evidenciasPreparadas.push({
+                                evidencia,
+                                imagem: null,
+                                erro: "indisponivel",
+                            });
                             continue;
                         }
 
@@ -837,10 +885,11 @@ export async function POST(
                                 );
                             }
 
-                            desenho.desenharImagem(
+                            evidenciasPreparadas.push({
+                                evidencia,
                                 imagem,
-                                `Evidencia ${evidencia.ordem} - ${item.texto}`
-                            );
+                                erro: null,
+                            });
                         } catch (error) {
                             console.error(
                                 "Erro ao incorporar evidencia no PDF:",
@@ -848,10 +897,134 @@ export async function POST(
                                 error
                             );
 
-                            desenho.escreverLinha(
-                                `Evidencia ${evidencia.ordem}: nao foi possivel incorporar a imagem.`,
-                                { tamanho: 9, recuo: 16, cor: CORES.vermelho }
+                            evidenciasPreparadas.push({
+                                evidencia,
+                                imagem: null,
+                                erro: "incorporacao",
+                            });
+                        }
+                    }
+
+                    const textoItem = `${item.ordem}. ${item.texto}`;
+                    const textoResultado =
+                        `Resultado: ${formatarResultado(item.resposta?.resultado ?? null)}`;
+                    const textoOrientacao = item.orientacao
+                        ? `Orientacao: ${item.orientacao}`
+                        : null;
+                    const textoObservacao = item.resposta?.observacao
+                        ? `Observacao: ${item.resposta.observacao}`
+                        : null;
+                    const textoCritico =
+                        item.item_vencimento === 1
+                            ? "Item sujeito a vencimento/criterio critico."
+                            : null;
+
+                    let alturaItem =
+                        desenho.medirAlturaTexto(textoItem, {
+                            negrito: true,
+                            recuo: 8,
+                        }) +
+                        desenho.medirAlturaTexto(textoResultado, {
+                            recuo: 16,
+                        }) +
+                        5;
+
+                    if (textoOrientacao) {
+                        alturaItem += desenho.medirAlturaTexto(
+                            textoOrientacao,
+                            { tamanho: 9, recuo: 16 }
+                        );
+                    }
+
+                    if (textoObservacao) {
+                        alturaItem += desenho.medirAlturaTexto(
+                            textoObservacao,
+                            { recuo: 16 }
+                        );
+                    }
+
+                    if (textoCritico) {
+                        alturaItem += desenho.medirAlturaTexto(
+                            textoCritico,
+                            { tamanho: 9, recuo: 16 }
+                        );
+                    }
+
+                    for (const preparada of evidenciasPreparadas) {
+                        if (preparada.imagem) {
+                            alturaItem += desenho.medirAlturaImagem(
+                                preparada.imagem,
+                                `Evidencia ${preparada.evidencia.ordem} - ${item.texto}`
                             );
+                        } else {
+                            const mensagem =
+                                preparada.erro === "indisponivel"
+                                    ? `Evidencia ${preparada.evidencia.ordem}: imagem indisponivel.`
+                                    : `Evidencia ${preparada.evidencia.ordem}: nao foi possivel incorporar a imagem.`;
+
+                            alturaItem += desenho.medirAlturaTexto(
+                                mensagem,
+                                { tamanho: 9, recuo: 16 }
+                            );
+                        }
+                    }
+
+                    desenho.garantirInicioBloco(alturaItem);
+
+                    desenho.escreverLinha(textoItem, {
+                        negrito: true,
+                        recuo: 8,
+                    });
+
+                    desenho.escreverLinha(textoResultado, {
+                        recuo: 16,
+                        cor:
+                            item.resposta?.resultado === "NAO_CONFORME"
+                                ? CORES.vermelho
+                                : CORES.preto,
+                    });
+
+                    if (textoOrientacao) {
+                        desenho.escreverLinha(textoOrientacao, {
+                            tamanho: 9,
+                            recuo: 16,
+                            cor: CORES.cinza,
+                        });
+                    }
+
+                    if (textoObservacao) {
+                        desenho.escreverLinha(textoObservacao, {
+                            recuo: 16,
+                        });
+                    }
+
+                    if (textoCritico) {
+                        desenho.escreverLinha(textoCritico, {
+                            tamanho: 9,
+                            recuo: 16,
+                            cor: CORES.vermelho,
+                        });
+                    }
+
+                    desenho.espacamento(5);
+
+                    for (const preparada of evidenciasPreparadas) {
+                        if (preparada.imagem) {
+                            desenho.desenharImagem(
+                                preparada.imagem,
+                                `Evidencia ${preparada.evidencia.ordem} - ${item.texto}`
+                            );
+                        } else {
+                            const mensagem =
+                                preparada.erro === "indisponivel"
+                                    ? `Evidencia ${preparada.evidencia.ordem}: imagem indisponivel.`
+                                    : `Evidencia ${preparada.evidencia.ordem}: nao foi possivel incorporar a imagem.`;
+
+                            desenho.escreverLinha(mensagem, {
+                                tamanho: 9,
+                                recuo: 16,
+                                cor: CORES.vermelho,
+                            });
                         }
                     }
                 }
