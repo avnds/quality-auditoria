@@ -750,6 +750,9 @@ export async function POST(
                 }
 
                 for (const item of secao.itens) {
+                    if (item.resposta?.resultado === "NAO_APLICAVEL") {
+                        continue;
+                    }
                     desenho.escreverLinha(
                         `${item.ordem}. ${item.texto}`,
                         { negrito: true, recuo: 8 }
