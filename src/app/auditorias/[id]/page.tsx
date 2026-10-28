@@ -390,13 +390,17 @@ export default function ExecucaoAuditoriaPage() {
         ) {
             return;
         }
-
+        const usarCamera = window.confirm(
+            "Como deseja adicionar a evidência?\n\nOK: Tirar foto com a câmera\nCancelar: Escolher da galeria/arquivos"
+        );
         const input = document.createElement("input");
 
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-
+        if (usarCamera) {
+            input.setAttribute("capture", "environment");
+        }
         input.onchange = async () => {
             const arquivo = input.files?.[0];
 
@@ -523,12 +527,18 @@ export default function ExecucaoAuditoriaPage() {
         evidencia: Evidencia,
         itemId: string
     ) => {
+        const usarCamera = window.confirm(
+            "Como deseja substituir a foto?\n\nOK: Tirar uma nova foto\nCancelar: Escolher da galeria/arquivos"
+        );
         const input =
             document.createElement("input");
 
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
+        if (usarCamera) {
+            input.setAttribute("capture", "environment");
+        }
 
         input.onchange = async () => {
             const arquivo = input.files?.[0];
