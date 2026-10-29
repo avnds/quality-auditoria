@@ -193,7 +193,7 @@ export default async function Home() {
         ]);
 
         const totaisStatus = new Map(
-            auditoriasStatus.rows.map((linha) => [String(linha.status), Number(linha.total)])
+            auditoriasStatus.rows.map((linha) => [String(linha.status), Number(linha.total)] as const)
         );
 
         indicadoresMaster.push(
