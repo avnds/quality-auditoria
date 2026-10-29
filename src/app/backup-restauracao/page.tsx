@@ -40,12 +40,12 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                 )}
 
                 <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                    <h2 className="text-xl font-bold text-[#12223f]">Backup do banco de desenvolvimento</h2>
+                    <h2 className="text-xl font-bold text-[#12223f]">Backup do banco conectado</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-600">O arquivo contém estrutura e dados do banco DEV. Guarde-o em local seguro: pode conter informações internas, dados pessoais e hashes de senha. Não o compartilhe.</p>
                     <a href="/api/backup-restauracao" className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182846]">
                         Baixar backup do banco DEV
                     </a>
-                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível somente em desenvolvimento local. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível para MASTER autenticado no ambiente local e em produção. O arquivo contém dados sensíveis; armazene-o com segurança. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
                 </section>
 
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
@@ -65,7 +65,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                             Substituir dados do banco DEV
                         </button>
                     </form>
-                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">A restauração só funciona em desenvolvimento local e com perfil MASTER. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada. O banco de produção é bloqueado por esta rota.</p>
+                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">O download do backup é permitido para MASTER autenticado também em produção. A restauração continua restrita ao ambiente local de desenvolvimento. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada.</p>
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
