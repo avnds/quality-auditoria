@@ -40,8 +40,23 @@ export default async function BackupRestauracaoPage() {
                 <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
                     <h2 className="font-bold text-amber-900">Restauração ainda não habilitada</h2>
                     <p className="mt-2 text-sm leading-6 text-amber-900">
-                        Esta primeira etapa prepara a área administrativa. Nenhum arquivo será enviado e nenhum banco será alterado por esta página.
-                        A execução será implementada somente depois de validarmos o procedimento técnico de importação no banco de desenvolvimento.
+                        A restauração permanece desabilitada. Nesta etapa, o download de backup fica disponível somente no ambiente local de desenvolvimento e após validação do perfil MASTER. Nenhum banco será restaurado ou alterado por esta página.
+                    </p>
+                </section>
+
+                <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h2 className="text-xl font-bold text-[#12223f]">Backup do banco de desenvolvimento</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                        O arquivo contém dados e estrutura do banco DEV. Armazene-o em local seguro e não o compartilhe, pois pode conter informações internas ou pessoais.
+                    </p>
+                    <a
+                        href="/api/backup-restauracao"
+                        className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182846]"
+                    >
+                        Baixar backup do banco DEV
+                    </a>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">
+                        Disponível somente em desenvolvimento local. As fotos de evidências do Vercel Blob não são incluídas.
                     </p>
                 </section>
 
