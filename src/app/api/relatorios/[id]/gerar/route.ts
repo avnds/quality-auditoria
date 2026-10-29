@@ -4,6 +4,8 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import db from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-permission";
@@ -145,7 +147,65 @@ function criarDesenhista(
 
     let pagina = pdf.addPage([larguraPagina, alturaPagina]);
     let y = alturaPagina - margem;
+    function cabecalhoInstitucional(
+        logo: Awaited<ReturnType<PDFDocument["embedJpg"]>>
+    ) {
+        const dimensoes = logo.scale(1);
+        const escala = Math.min(
+            100 / dimensoes.width,
+            55 / dimensoes.height,
+            1
+        );
 
+        const larguraLogo = dimensoes.width * escala;
+        const alturaLogo = dimensoes.height * escala;
+        const topo = y;
+
+        pagina.drawImage(logo, {
+            x: margem,
+            y: topo - alturaLogo,
+            width: larguraLogo,
+            height: alturaLogo,
+        });
+
+        const xTexto = margem + 115;
+        const yTexto = topo - 12;
+
+        pagina.drawText("QUALITY CONSULTORIA EM ALIMENTOS LTDA", {
+            x: xTexto,
+            y: yTexto,
+            size: 10,
+            font: fonteNegrito,
+            color: CORES.azul,
+        });
+
+        pagina.drawText("CNPJ: 68.385.694/0001-66", {
+            x: xTexto,
+            y: yTexto - 17,
+            size: 9,
+            font: fonte,
+            color: CORES.preto,
+        });
+
+        pagina.drawText("Telefone: 8893094708", {
+            x: xTexto,
+            y: yTexto - 32,
+            size: 9,
+            font: fonte,
+            color: CORES.preto,
+        });
+
+        const fimCabecalho = Math.max(alturaLogo, 45);
+
+        pagina.drawLine({
+            start: { x: margem, y: topo - fimCabecalho - 8 },
+            end: { x: larguraPagina - margem, y: topo - fimCabecalho - 8 },
+            thickness: 1,
+            color: CORES.azul,
+        });
+
+        y = topo - fimCabecalho - 20;
+    }
     function novaPagina() {
         pagina = pdf.addPage([larguraPagina, alturaPagina]);
         y = alturaPagina - margem;
@@ -384,6 +444,7 @@ function criarDesenhista(
     }
 
     return {
+        cabecalhoInstitucional,
         escreverLinha,
         espacamento,
         titulo,
@@ -456,6 +517,7 @@ export async function POST(
                     a.gerente_setor_nome,
                     a.criada_em,
                     l.nome AS loja_nome,
+                    l.cnpj AS loja_cnpj,
                     c.nome_fantasia AS cliente_nome,
                     u.nome AS auditor_nome,
                     av.id AS auditoria_versao_id,
@@ -728,6 +790,12 @@ export async function POST(
         const fonteNegrito = await pdf.embedFont(StandardFonts.HelveticaBold);
 
         const desenho = criarDesenhista(pdf, fonte, fonteNegrito);
+        const logoBytes = await readFile(
+            path.join(process.cwd(), "public", "logo avancado quality.jpeg")
+        );
+        const logo = await pdf.embedJpg(logoBytes);
+
+        desenho.cabecalhoInstitucional(logo);
 
         desenho.escreverLinha("RELATORIO DE AUDITORIA", {
             tamanho: 19,
@@ -742,7 +810,9 @@ export async function POST(
 
         desenho.titulo("IDENTIFICACAO");
         desenho.escreverLinha(`Cliente: ${textoSeguro(auditoria.cliente_nome)}`);
-        desenho.escreverLinha(`Loja: ${textoSeguro(auditoria.loja_nome)}`);
+        desenho.escreverLinha(
+            `Loja: ${textoSeguro(auditoria.loja_nome)} | CNPJ: ${textoSeguro(auditoria.loja_cnpj || "Não informado")}`
+        );
         desenho.escreverLinha(`Auditor: ${textoSeguro(auditoria.auditor_nome)}`);
         desenho.escreverLinha(
             `Gerente da Loja: ${textoSeguro(auditoria.gerente_loja_nome)}`

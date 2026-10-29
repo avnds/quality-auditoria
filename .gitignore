@@ -42,3 +42,6 @@ next-env.d.ts
 
 .vercel
 .env*
+/limpar-blobs-teste.mjs
+/limpar-todos-blobs.cjs
+/testar-blob.cjs
