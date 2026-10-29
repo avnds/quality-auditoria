@@ -104,10 +104,10 @@ export async function createLogicalDatabaseBackup(
             tables.push({
                 name: table.name,
                 createSql: table.sql,
-                columns: result.columns.map((column) => column.name),
+                columns: result.columns,
                 rows: result.rows.map((row) =>
                     result.columns.map((column) =>
-                        encodeValue(row[column.name] as InValue)
+                        encodeValue(row[column] as InValue)
                     )
                 ),
             });
