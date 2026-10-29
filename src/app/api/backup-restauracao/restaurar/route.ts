@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type BackupValue = null | string | number | boolean | { $type: "bigint"; value: string } | { $type: "blob"; base64: string };
 type BackupTable = { name: string; createSql: string; columns: string[]; rows: BackupValue[][] };
 type SchemaEntry = { type: string; name: string; tableName: string; sql: string };
-type BackupFile = { format: "quality-auditoria-logical-backup"; formatVersion: 1; source: "development"; schema: SchemaEntry[]; tables: BackupTable[] };
+type BackupFile = { format: "quality-auditoria-logical-backup"; formatVersion: 1; source: "development" | "production"; schema: SchemaEntry[]; tables: BackupTable[] };
 
 function fail(message: string, status = 400) {
     return NextResponse.json({ success: false, message }, { status });
@@ -49,7 +49,7 @@ function decodeValue(value: BackupValue): InValue {
 }
 
 function validateBackup(value: unknown): BackupFile {
-    if (!isRecord(value) || value.format !== "quality-auditoria-logical-backup" || value.formatVersion !== 1 || value.source !== "development" || !Array.isArray(value.schema) || !Array.isArray(value.tables) || value.tables.length === 0 || value.tables.length > 200 || value.schema.length > 2_000) {
+    if (!isRecord(value) || value.format !== "quality-auditoria-logical-backup" || value.formatVersion !== 1 || !(value.source === "development" || value.source === "production") || !Array.isArray(value.schema) || !Array.isArray(value.tables) || value.tables.length === 0 || value.tables.length > 200 || value.schema.length > 2_000) {
         throw new Error("Formato de backup inválido ou não compatível.");
     }
 
