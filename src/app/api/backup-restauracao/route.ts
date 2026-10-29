@@ -7,19 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    // A primeira etapa fica restrita ao ambiente local de desenvolvimento.
-    // Isso impede que a rota use acidentalmente as credenciais da Vercel.
-    if (process.env.NODE_ENV === "production") {
-        return NextResponse.json(
-            {
-                success: false,
-                message:
-                    "A exportação de backup está bloqueada neste ambiente.",
-            },
-            { status: 403 }
-        );
-    }
-
+    // Exportação permitida em DEV e produção, restrita ao perfil MASTER autenticado.
     const usuario = await getCurrentUser();
 
     if (!usuario) {
