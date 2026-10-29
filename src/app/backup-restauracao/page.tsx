@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
 type PageProps = {
-    searchParams: Promise<{ restaurado?: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function BackupRestauracaoPage({ searchParams }: PageProps) {
