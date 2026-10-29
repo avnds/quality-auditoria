@@ -41,11 +41,11 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
 
                 <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                     <h2 className="text-xl font-bold text-[#12223f]">Backup do banco conectado</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">O arquivo contém estrutura e dados do banco DEV. Guarde-o em local seguro: pode conter informações internas, dados pessoais e hashes de senha. Não o compartilhe.</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">O arquivo contém a estrutura e os dados do banco ao qual esta aplicação está conectada. Guarde-o em local seguro: pode conter informações internas, dados pessoais e hashes de senha. Não o compartilhe.</p>
                     <a href="/api/backup-restauracao" className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182846]">
-                        Baixar backup do banco DEV
+                        Baixar backup do banco conectado
                     </a>
-                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível para MASTER autenticado no ambiente local e em produção. O arquivo contém dados sensíveis; armazene-o com segurança. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível para MASTER autenticado no ambiente local e em produção. Ao baixar na aplicação publicada, o arquivo contém os dados do banco conectado à produção. O arquivo contém dados sensíveis; armazene-o com segurança. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
                 </section>
 
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
@@ -55,7 +55,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                         <div>
                             <label htmlFor="arquivo" className="mb-2 block text-sm font-semibold text-slate-800">Arquivo JSON do backup</label>
                             <input id="arquivo" name="arquivo" type="file" accept=".json,application/json" required className="block w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-semibold" />
-                            <p className="mt-1 text-xs text-slate-500">Limite: 25 MB. O arquivo deve ter sido gerado pelo backup lógico do Quality Auditoria.</p>
+                            <p className="mt-1 text-xs text-slate-500">Limite: 25 MB. O arquivo deve ter sido gerado pelo backup lógico do Quality Auditoria; backups de DEV e produção são aceitos.</p>
                         </div>
                         <div>
                             <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: RESTAURAR DEV</label>
