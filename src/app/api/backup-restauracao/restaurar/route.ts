@@ -20,7 +20,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function safeCreateStatement(sql: string, type: "table" | "index", name: string) {
-    if (sql.length > 100_000 || sql.includes(";") || /\b(PRAGMA|ATTACH|DETACH|VACUUM|INSERT|UPDATE|DELETE|DROP|ALTER)\b/i.test(sql)) return false;
+    if (sql.length > 100_000 || sql.includes(";") || /--|\/\*/.test(sql)) return false;
     const prefix = type === "table"
         ? /^CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?/i
         : /^CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?/i;
