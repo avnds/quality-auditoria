@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { del, get, put } from "@vercel/blob";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+//import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFImage, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
@@ -147,9 +148,7 @@ function criarDesenhista(
 
     let pagina = pdf.addPage([larguraPagina, alturaPagina]);
     let y = alturaPagina - margem;
-    function cabecalhoInstitucional(
-        logo: Awaited<ReturnType<PDFDocument["embedJpg"]>>
-    ) {
+    function cabecalhoInstitucional(logo: PDFImage) {
         const dimensoes = logo.scale(1);
         const escala = Math.min(
             100 / dimensoes.width,
@@ -793,7 +792,7 @@ export async function POST(
         const logoBytes = await readFile(
             path.join(process.cwd(), "public", "icone1.png")
         );
-        const logo = await pdf.embedJpg(logoBytes);
+        const logo = await pdf.embedPng(logoBytes);
 
         desenho.cabecalhoInstitucional(logo);
 
