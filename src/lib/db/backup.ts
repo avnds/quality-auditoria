@@ -122,6 +122,6 @@ export async function createLogicalDatabaseBackup(
             tables,
         };
     } finally {
-        transaction.close();
+        await transaction.close();
     }
 }
