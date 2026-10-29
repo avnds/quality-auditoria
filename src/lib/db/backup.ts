@@ -19,7 +19,7 @@ export type LogicalDatabaseBackup = {
     format: "quality-auditoria-logical-backup";
     formatVersion: 1;
     createdAt: string;
-    source: "development";
+    source: "development" | "production";
     schema: Array<{
         type: string;
         name: string;
@@ -117,7 +117,7 @@ export async function createLogicalDatabaseBackup(
             format: "quality-auditoria-logical-backup",
             formatVersion: 1,
             createdAt: new Date().toISOString(),
-            source: "development",
+            source: process.env.NODE_ENV === "production" ? "production" : "development",
             schema,
             tables,
         };
