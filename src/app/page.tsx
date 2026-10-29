@@ -166,17 +166,11 @@ export default async function Home() {
     let totalCorrecao = 0;
     let totalAbertas = 0;
 
-    if (ehMaster) {
+    if (ehMaster || ehSupervisora) {
         const [clientes, lojas, usuariosAtivos, auditoriasStatus] = await Promise.all([
-            podeVerClientes
-                ? db.execute("SELECT COUNT(*) AS total FROM clientes WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
-            podeVerClientes
-                ? db.execute("SELECT COUNT(*) AS total FROM lojas WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
-            podeVerUsuarios
-                ? db.execute("SELECT COUNT(*) AS total FROM usuarios WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
+            db.execute("SELECT COUNT(*) AS total FROM clientes WHERE ativo = 1"),
+            db.execute("SELECT COUNT(*) AS total FROM lojas WHERE ativo = 1"),
+            db.execute("SELECT COUNT(*) AS total FROM usuarios WHERE ativo = 1"),
             podeVerAuditorias
                 ? db.execute(`
                     SELECT av.status, COUNT(*) AS total
@@ -368,6 +362,33 @@ export default async function Home() {
                             <CartaoIndicador indicador={{ titulo: "Aguardando análise", valor: totalAguardando, descricao: "Auditorias enviadas", href: "/auditorias" }} />
                             <CartaoIndicador indicador={{ titulo: "Em correção", valor: totalCorrecao, descricao: "Auditorias que precisam de ajustes", href: "/auditorias" }} />
                         </div>
+
+                        <section className="mb-8">
+                            <SecaoTitulo
+                                titulo="Visão geral"
+                                descricao="Indicadores atuais do sistema."
+                            />
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                {indicadoresMaster.map((indicador) => (
+                                    <CartaoIndicador key={indicador.titulo} indicador={indicador} />
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="mb-8">
+                            <SecaoTitulo
+                                titulo="Auditorias por situação"
+                                descricao="Quantidade de auditorias na situação atual."
+                                href="/auditorias"
+                                linkTexto="Abrir auditorias"
+                            />
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <CartaoIndicador indicador={{ titulo: "Aguardando análise", valor: totalAguardando, descricao: "Enviadas à supervisão", href: "/auditorias" }} />
+                                <CartaoIndicador indicador={{ titulo: "Em correção", valor: totalCorrecao, descricao: "Devolvidas para ajustes", href: "/auditorias" }} />
+                                <CartaoIndicador indicador={{ titulo: "Em andamento", valor: totalAbertas, descricao: "Auditorias ainda abertas", href: "/auditorias" }} />
+                            </div>
+                        </section>
+
                         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                             <ListaAuditorias
                                 auditorias={auditoriasRecentes}
