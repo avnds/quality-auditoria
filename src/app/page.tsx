@@ -168,15 +168,9 @@ export default async function Home() {
 
     if (ehMaster || ehSupervisora) {
         const [clientes, lojas, usuariosAtivos, auditoriasStatus] = await Promise.all([
-            podeVerClientes
-                ? db.execute("SELECT COUNT(*) AS total FROM clientes WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
-            podeVerClientes
-                ? db.execute("SELECT COUNT(*) AS total FROM lojas WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
-            podeVerUsuarios
-                ? db.execute("SELECT COUNT(*) AS total FROM usuarios WHERE ativo = 1")
-                : Promise.resolve({ rows: [{ total: 0 }] }),
+            db.execute("SELECT COUNT(*) AS total FROM clientes WHERE ativo = 1"),
+            db.execute("SELECT COUNT(*) AS total FROM lojas WHERE ativo = 1"),
+            db.execute("SELECT COUNT(*) AS total FROM usuarios WHERE ativo = 1"),
             podeVerAuditorias
                 ? db.execute(`
                     SELECT av.status, COUNT(*) AS total
