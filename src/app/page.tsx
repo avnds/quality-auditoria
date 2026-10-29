@@ -347,6 +347,26 @@ export default async function Home() {
                                 Os valores serão exibidos após integração com fontes oficiais; nenhum consumo é estimado nesta tela.
                             </p>
                         </section>
+
+                        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold text-[#12223f]">Backup e restauração</h2>
+                                    <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                                        Acesse a área administrativa para consultar as etapas de proteção e restauração do banco de dados.
+                                    </p>
+                                    <p className="mt-2 text-xs font-medium text-amber-700">
+                                        A restauração ainda não está habilitada nesta etapa.
+                                    </p>
+                                </div>
+                                <Link
+                                    href="/backup-restauracao"
+                                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-[#22365b] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                >
+                                    Abrir área de backup
+                                </Link>
+                            </div>
+                        </section>
                     </>
                 ) : null}
 
