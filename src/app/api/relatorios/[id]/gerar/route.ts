@@ -791,7 +791,7 @@ export async function POST(
 
         const desenho = criarDesenhista(pdf, fonte, fonteNegrito);
         const logoBytes = await readFile(
-            path.join(process.cwd(), "public", "logo avancado quality.jpeg")
+            path.join(process.cwd(), "public", "icone1.png")
         );
         const logo = await pdf.embedJpg(logoBytes);
 
