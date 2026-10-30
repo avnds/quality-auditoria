@@ -183,7 +183,13 @@ export default function TreinamentosManager({ lojaId }: Props) {
             if (!response.ok || !data.success) {
                 throw new Error(data.message || "Não foi possível emitir o certificado.");
             }
-            setMensagem("Certificado " + data.certificado.numero + " emitido para " + data.certificado.nomeColaborador + ".");
+            setMensagem(
+                (data.certificado.regenerado ? "Certificado " : "Certificado ") +
+                data.certificado.numero +
+                (data.certificado.regenerado ? " regenerado para " : " emitido para ") +
+                data.certificado.nomeColaborador +
+                "."
+            );
             await carregar();
         } catch (error) {
             setErro(true);
@@ -338,18 +344,21 @@ export default function TreinamentosManager({ lojaId }: Props) {
                                                             <p className="mt-1 text-xs font-semibold text-emerald-700">Emitido: {participante.certificadoNumero}</p>
                                                         )}
                                                     </div>
-                                                    {participante.certificadoId ? (
-                                                        <span className="text-xs font-semibold text-emerald-700">Certificado emitido</span>
-                                                    ) : (
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {participante.certificadoId && (
+                                                            <span className="text-xs font-semibold text-emerald-700">Certificado emitido</span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => emitirCertificado(treinamento.id, participante.id)}
                                                             disabled={emitindo !== null}
                                                             className="rounded-lg bg-[#22365b] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#182947] disabled:cursor-not-allowed disabled:opacity-50"
                                                         >
-                                                            {emitindo === participante.id ? "Emitindo..." : "Gerar certificado"}
+                                                            {emitindo === participante.id
+                                                                ? (participante.certificadoId ? "Regenerando..." : "Emitindo...")
+                                                                : (participante.certificadoId ? "Gerar novamente" : "Gerar certificado")}
                                                         </button>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
