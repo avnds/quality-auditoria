@@ -218,7 +218,7 @@ export async function POST(
         });
 
         pagina.drawText("Certificamos que", {
-            x: 70, y: 560, size: 14, font, color: cinza,
+            x: 70, y: 560, size: 14, font: fonte, color: cinza,
         });
         pagina.drawText(nome, {
             x: 70, y: 515, size: 25, font: negrito, color: azul,
@@ -228,7 +228,7 @@ export async function POST(
         let y = 485;
         if (cargo) {
             pagina.drawText(cargo, {
-                x: 70, y, size: 11, font, color: cinza,
+                x: 70, y, size: 11, font: fonte, color: cinza,
                 maxWidth: largura - 140,
             });
             y -= 32;
@@ -239,7 +239,7 @@ export async function POST(
         const descricao = `participou do treinamento "${titulo}", realizado em ${data}, com carga horaria de ${Math.floor(carga / 60)} hora(s) e ${carga % 60} minuto(s).`;
         for (const linha of quebrarTexto(descricao, 78)) {
             pagina.drawText(linha, {
-                x: 70, y, size: 12, font, color: cinza,
+                x: 70, y, size: 12, font: fonte, color: cinza,
                 maxWidth: largura - 140,
             });
             y -= 21;
@@ -247,17 +247,17 @@ export async function POST(
 
         y -= 18;
         pagina.drawText(`Empresa: ${cliente}`, {
-            x: 70, y, size: 10, font, color: cinza,
+            x: 70, y, size: 10, font: fonte, color: cinza,
             maxWidth: largura - 140,
         });
         y -= 18;
         pagina.drawText(`Estabelecimento: ${loja}`, {
-            x: 70, y, size: 10, font, color: cinza,
+            x: 70, y, size: 10, font: fonte, color: cinza,
             maxWidth: largura - 140,
         });
         y -= 18;
         pagina.drawText(`Ministrante: ${ministrante}`, {
-            x: 70, y, size: 10, font, color: cinza,
+            x: 70, y, size: 10, font: fonte, color: cinza,
             maxWidth: largura - 140,
         });
 
@@ -269,7 +269,7 @@ export async function POST(
             y -= 18;
             for (const linha of quebrarTexto(textoPdf(conteudo), 85).slice(0, 5)) {
                 pagina.drawText(linha, {
-                    x: 70, y, size: 9, font, color: cinza,
+                    x: 70, y, size: 9, font: fonte, color: cinza,
                     maxWidth: largura - 140,
                 });
                 y -= 14;
@@ -287,11 +287,11 @@ export async function POST(
             maxWidth: largura - 200,
         });
         pagina.drawText("Responsavel pelo treinamento", {
-            x: 100, y: 108, size: 9, font, color: cinza,
+            x: 100, y: 108, size: 9, font: fonte, color: cinza,
             maxWidth: largura - 200,
         });
         pagina.drawText(`Certificado: ${numero}`, {
-            x: 70, y: 65, size: 8, font, color: cinza,
+            x: 70, y: 65, size: 8, font: fonte, color: cinza,
         });
 
         const bytes = Buffer.from(await pdf.save());
