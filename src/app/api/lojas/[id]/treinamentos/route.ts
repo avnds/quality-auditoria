@@ -107,8 +107,14 @@ export async function POST(request: Request, context: RouteContext) {
                 ? body.conteudoProgramatico.trim()
                 : "";
         const ministrante = typeof body.ministrante === "string" ? body.ministrante.trim() : "";
-        const colaboradorIds = Array.isArray(body.colaboradorIds)
-            ? [...new Set(body.colaboradorIds.filter((id: unknown) => typeof id === "string" && id.trim()).map((id: string) => id.trim()))]
+        const colaboradorIds: string[] = Array.isArray(body.colaboradorIds)
+            ? Array.from(
+                new Set(
+                    (body.colaboradorIds as unknown[])
+                        .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+                        .map((id) => id.trim())
+                )
+            )
             : [];
 
         if (!titulo || titulo.length > 180) {
@@ -162,7 +168,7 @@ export async function POST(request: Request, context: RouteContext) {
                   AND ativo = 1
                   AND id IN (${placeholders})
             `,
-            args: [lojaId, ...colaboradorIds],
+            args: [lojaId, ...colaboradorIds] as InValue[],
         });
 
         if (colaboradoresResult.rows.length !== colaboradorIds.length) {
