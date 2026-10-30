@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { del, put } from "@vercel/blob";
+import { del } from "@vercel/blob";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -71,7 +71,6 @@ export async function POST(
     _request: Request,
     context: RouteContext
 ) {
-    let arquivoUri: string | null = null;
 
     try {
         const auth = await requirePermission("certificados.gerar");
@@ -282,118 +281,102 @@ export async function POST(
         centralizar("PARTICIPANTE", 45, 7.5, negrito, branco, 574, 235);
 
         const bytes = Buffer.from(await pdf.save());
-        const caminho = `certificados/${lojaId}/${certificadoId}.pdf`;
-        const arquivo = await put(caminho, bytes, {
-            access: "private",
-            addRandomSuffix: true,
-            contentType: "application/pdf",
-        });
-        arquivoUri = arquivo.url;
 
-        try {
-            if (certificadoExistente) {
-                await db.execute({
-                    sql: `
-                        UPDATE certificados
-                        SET
-                            nome_colaborador = ?,
-                            cargo_colaborador = ?,
-                            nome_loja = ?,
-                            nome_cliente = ?,
-                            titulo_treinamento = ?,
-                            data_realizacao = ?,
-                            carga_horaria_minutos = ?,
-                            conteudo_programatico = ?,
-                            ministrante = ?,
-                            emitido_por = ?,
-                            arquivo_uri = ?
-                        WHERE id = ?
-                          AND treinamento_colaborador_id = ?
-                    `,
-                    args: [
-                        String(participante.nome_colaborador_snapshot),
-                        participante.cargo_snapshot == null ? null : String(participante.cargo_snapshot),
-                        String(participante.loja_nome),
-                        String(participante.cliente_nome),
-                        String(participante.titulo),
-                        String(participante.data_realizacao),
-                        carga,
-                        participante.conteudo_programatico == null ? null : String(participante.conteudo_programatico),
-                        String(participante.ministrante),
-                        auth.usuario.id,
-                        arquivoUri,
-                        certificadoId,
-                        participanteId,
-                    ],
-                });
-            } else {
-                await db.execute({
-                    sql: `
-                        INSERT INTO certificados (
-                            id,
-                            treinamento_colaborador_id,
-                            numero,
-                            nome_colaborador,
-                            cargo_colaborador,
-                            nome_loja,
-                            nome_cliente,
-                            titulo_treinamento,
-                            data_realizacao,
-                            carga_horaria_minutos,
-                            conteudo_programatico,
-                            ministrante,
-                            emitido_por,
-                            arquivo_uri
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `,
-                    args: [
-                        certificadoId,
-                        participanteId,
+        // O PDF é entregue diretamente ao navegador; somente os dados da emissão ficam no banco.
+        if (certificadoExistente) {
+            await db.execute({
+                sql: `
+                    UPDATE certificados
+                    SET
+                        nome_colaborador = ?,
+                        cargo_colaborador = ?,
+                        nome_loja = ?,
+                        nome_cliente = ?,
+                        titulo_treinamento = ?,
+                        data_realizacao = ?,
+                        carga_horaria_minutos = ?,
+                        conteudo_programatico = ?,
+                        ministrante = ?,
+                        emitido_por = ?,
+                        arquivo_uri = NULL
+                    WHERE id = ?
+                      AND treinamento_colaborador_id = ?
+                `,
+                args: [
+                    String(participante.nome_colaborador_snapshot),
+                    participante.cargo_snapshot == null ? null : String(participante.cargo_snapshot),
+                    String(participante.loja_nome),
+                    String(participante.cliente_nome),
+                    String(participante.titulo),
+                    String(participante.data_realizacao),
+                    carga,
+                    participante.conteudo_programatico == null ? null : String(participante.conteudo_programatico),
+                    String(participante.ministrante),
+                    auth.usuario.id,
+                    certificadoId,
+                    participanteId,
+                ],
+            });
+        } else {
+            await db.execute({
+                sql: `
+                    INSERT INTO certificados (
+                        id,
+                        treinamento_colaborador_id,
                         numero,
-                        String(participante.nome_colaborador_snapshot),
-                        participante.cargo_snapshot == null ? null : String(participante.cargo_snapshot),
-                        String(participante.loja_nome),
-                        String(participante.cliente_nome),
-                        String(participante.titulo),
-                        String(participante.data_realizacao),
-                        carga,
-                        participante.conteudo_programatico == null ? null : String(participante.conteudo_programatico),
-                        String(participante.ministrante),
-                        auth.usuario.id,
-                        arquivoUri,
-                    ],
-                });
-            }
-        } catch (error) {
-            await del(arquivoUri);
-            arquivoUri = null;
-            throw error;
+                        nome_colaborador,
+                        cargo_colaborador,
+                        nome_loja,
+                        nome_cliente,
+                        titulo_treinamento,
+                        data_realizacao,
+                        carga_horaria_minutos,
+                        conteudo_programatico,
+                        ministrante,
+                        emitido_por,
+                        arquivo_uri
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                `,
+                args: [
+                    certificadoId,
+                    participanteId,
+                    numero,
+                    String(participante.nome_colaborador_snapshot),
+                    participante.cargo_snapshot == null ? null : String(participante.cargo_snapshot),
+                    String(participante.loja_nome),
+                    String(participante.cliente_nome),
+                    String(participante.titulo),
+                    String(participante.data_realizacao),
+                    carga,
+                    participante.conteudo_programatico == null ? null : String(participante.conteudo_programatico),
+                    String(participante.ministrante),
+                    auth.usuario.id,
+                ],
+            });
         }
 
-        // Só remove o PDF antigo depois que o novo foi salvo e registrado no banco.
-        if (arquivoAnteriorUri && arquivoAnteriorUri !== arquivoUri) {
+        // Se este certificado tinha um PDF antigo no Blob, remove-o após atualizar o registro.
+        if (arquivoAnteriorUri) {
             try {
                 await del(arquivoAnteriorUri);
             } catch (error) {
-                console.error("Não foi possível excluir o PDF anterior do Blob:", error);
+                console.error("Não foi possível excluir o PDF antigo do Blob:", error);
             }
         }
 
-        return NextResponse.json(
-            {
-                success: true,
-                message: certificadoExistente
-                    ? "Certificado regenerado com sucesso."
-                    : "Certificado emitido com sucesso.",
-                certificado: {
-                    id: certificadoId,
-                    numero,
-                    nomeColaborador: nome,
-                    regenerado: Boolean(certificadoExistente),
-                },
+        const nomeArquivo = `certificado-${numero}.pdf`;
+        return new Response(new Uint8Array(bytes), {
+            status: certificadoExistente ? 200 : 201,
+            headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `attachment; filename="${nomeArquivo}"`,
+                "Content-Length": String(bytes.length),
+                "Cache-Control": "no-store",
+                "X-Certificado-Numero": numero,
+                "X-Certificado-Nome": encodeURIComponent(nome),
+                "X-Certificado-Regenerado": certificadoExistente ? "true" : "false",
             },
-            { status: certificadoExistente ? 200 : 201 }
-        );
+        });
     } catch (error) {
         console.error("Erro ao emitir certificado:", error);
         return NextResponse.json(
