@@ -275,10 +275,10 @@ export async function POST(
         // Assinaturas: o nome fica imediatamente abaixo da linha correspondente.
         const linhaY = 76;
         pagina.drawLine({ start: { x: 145, y: linhaY }, end: { x: 390, y: linhaY }, thickness: 1.2, color: azul });
-        pagina.drawLine({ start: { x: 452, y: linhaY }, end: { x: 697, y: linhaY }, thickness: 1.2, color: azul });
+        pagina.drawLine({ start: { x: 452, y: linhaY }, end: { x: 697, y: linhaY }, thickness: 1.8, color: branco });
         centralizar(ministrante, 59, 9, negrito, azul, 267, 235);
         centralizar("RESPONSÁVEL PELO TREINAMENTO", 45, 7.5, fonte, cinza, 267, 235);
-        centralizar(nome, 59, 9, negrito, azul, 574, 235);
+        centralizar(nome, 59, 9, negrito, branco, 574, 235);
         centralizar("PARTICIPANTE", 45, 7.5, negrito, branco, 574, 235);
 
         const bytes = Buffer.from(await pdf.save());
