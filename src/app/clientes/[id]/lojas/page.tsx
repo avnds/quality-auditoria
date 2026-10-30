@@ -383,6 +383,12 @@ export default async function LojasPage({
                                                                     >
                                                                         Colaboradores
                                                                     </Link>
+                                                                    <Link
+                                                                        href={`/clientes/${cliente.id}/lojas/${loja.id}/treinamentos`}
+                                                                        className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#22365b]/20 bg-white px-3 py-2 text-xs font-semibold text-[#22365b] shadow-sm transition-colors hover:border-[#22365b] hover:bg-[#22365b]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22365b]/30"
+                                                                    >
+                                                                        Treinamentos
+                                                                    </Link>
                                                                     <EditarLojaButton lojaId={loja.id} />
                                                                 </>
                                                             )}
@@ -476,6 +482,12 @@ export default async function LojasPage({
                                                                 className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
                                                             >
                                                                 Colaboradores
+                                                            </Link>
+                                                            <Link
+                                                                href={`/clientes/${cliente.id}/lojas/${loja.id}/treinamentos`}
+                                                                className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
+                                                            >
+                                                                Treinamentos
                                                             </Link>
 
                                                             <EditarLojaButton lojaId={loja.id} />
