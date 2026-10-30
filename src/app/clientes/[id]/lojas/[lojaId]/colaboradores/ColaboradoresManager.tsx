@@ -41,8 +41,36 @@ export default function ColaboradoresManager({ lojaId, lojaNome }: Props) {
     }, [lojaId]);
 
     useEffect(() => {
-        void carregar();
-    }, [carregar]);
+        let ativo = true;
+
+        fetch(`/api/lojas/${lojaId}/colaboradores`)
+            .then(async (response) => {
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || "Falha ao carregar.");
+                }
+                return data.colaboradores as Colaborador[];
+            })
+            .then((lista) => {
+                if (ativo) {
+                    setColaboradores(lista);
+                }
+            })
+            .catch((error: unknown) => {
+                if (ativo) {
+                    setMensagem(error instanceof Error ? error.message : "Erro ao carregar colaboradores.");
+                }
+            })
+            .finally(() => {
+                if (ativo) {
+                    setCarregando(false);
+                }
+            });
+
+        return () => {
+            ativo = false;
+        };
+    }, [lojaId]);
 
     function limparFormulario() {
         setEditando(null);
