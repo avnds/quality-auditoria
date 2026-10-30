@@ -69,7 +69,54 @@ export async function GET(_request: Request, context: RouteContext) {
             args: [lojaId],
         });
 
-        return NextResponse.json({ success: true, treinamentos: result.rows });
+        const participantesResult = await db.execute({
+            sql: `
+                SELECT
+                    tc.id,
+                    tc.treinamento_id,
+                    tc.nome_colaborador_snapshot,
+                    tc.cargo_snapshot,
+                    cert.id AS certificado_id,
+                    cert.numero AS certificado_numero
+                FROM treinamento_colaboradores tc
+                LEFT JOIN certificados cert
+                    ON cert.treinamento_colaborador_id = tc.id
+                INNER JOIN treinamentos t
+                    ON t.id = tc.treinamento_id
+                WHERE t.loja_id = ?
+                ORDER BY tc.nome_colaborador_snapshot
+            `,
+            args: [lojaId],
+        });
+
+        const participantesPorTreinamento = new Map<string, {
+            id: string;
+            nome: string;
+            cargo: string | null;
+            certificadoId: string | null;
+            certificadoNumero: string | null;
+        }[]>();
+
+        for (const row of participantesResult.rows) {
+            const treinamentoId = String(row.treinamento_id);
+            const lista = participantesPorTreinamento.get(treinamentoId) ?? [];
+            lista.push({
+                id: String(row.id),
+                nome: String(row.nome_colaborador_snapshot),
+                cargo: row.cargo_snapshot == null ? null : String(row.cargo_snapshot),
+                certificadoId: row.certificado_id == null ? null : String(row.certificado_id),
+                certificadoNumero: row.certificado_numero == null ? null : String(row.certificado_numero),
+            });
+            participantesPorTreinamento.set(treinamentoId, lista);
+        }
+
+        const treinamentos = result.rows.map((row) => ({
+            ...row,
+            participantesDetalhados:
+                participantesPorTreinamento.get(String(row.id)) ?? [],
+        }));
+
+        return NextResponse.json({ success: true, treinamentos });
     } catch (error) {
         console.error("Erro ao consultar treinamentos:", error);
         return NextResponse.json(
