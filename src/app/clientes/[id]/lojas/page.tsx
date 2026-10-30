@@ -376,14 +376,15 @@ export default async function LojasPage({
                                                     <td className="px-5 py-4">
                                                         <div className="flex flex-nowrap items-center justify-end gap-3 whitespace-nowrap">
                                                             {podeGerenciar && (
-                                                                <Link
-                                                                href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
-                                                                className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
-                                                            >
-                                                                Colaboradores
-                                                            </Link>
-
-                                                            <EditarLojaButton lojaId={loja.id} />
+                                                                <>
+                                                                    <Link
+                                                                        href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
+                                                                        className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
+                                                                    >
+                                                                        Colaboradores
+                                                                    </Link>
+                                                                    <EditarLojaButton lojaId={loja.id} />
+                                                                </>
                                                             )}
 
                                                             <TelefonesLojaButton
