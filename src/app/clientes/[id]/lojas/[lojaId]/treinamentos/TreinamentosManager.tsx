@@ -43,7 +43,13 @@ export default function TreinamentosManager({ lojaId }: Props) {
     const [treinamentos, setTreinamentos] = useState<Treinamento[]>([]);
     const [selecionados, setSelecionados] = useState<string[]>([]);
     const [titulo, setTitulo] = useState("Treinamento de Boas Práticas");
-    const [dataRealizacao, setDataRealizacao] = useState(new Date().toLocaleDateString("en-CA"));
+    const [dataRealizacao, setDataRealizacao] = useState(() => {
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+        const dia = String(hoje.getDate()).padStart(2, "0");
+        return `${ano}-${mes}-${dia}`;
+    });
     const [cargaHoraria, setCargaHoraria] = useState("4");
     const [conteudoProgramatico, setConteudoProgramatico] = useState("");
     const [ministrante, setMinistrante] = useState("");
