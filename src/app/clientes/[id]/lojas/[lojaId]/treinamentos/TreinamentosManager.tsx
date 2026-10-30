@@ -19,6 +19,13 @@ type Treinamento = {
     ministrante: string;
     total_participantes: number;
     participantes: string | null;
+    participantesDetalhados: {
+        id: string;
+        nome: string;
+        cargo: string | null;
+        certificadoId: string | null;
+        certificadoNumero: string | null;
+    }[];
 };
 
 type Props = { lojaId: string };
@@ -70,6 +77,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [erro, setErro] = useState(false);
+    const [emitindo, setEmitindo] = useState<string | null>(null);
 
     const carregar = useCallback(async () => {
         const [colaboradoresResponse, treinamentosResponse] = await Promise.all([
@@ -159,6 +167,29 @@ export default function TreinamentosManager({ lojaId }: Props) {
             setMensagem(error instanceof Error ? error.message : "Erro ao registrar treinamento.");
         } finally {
             setSalvando(false);
+        }
+    }
+
+    async function emitirCertificado(treinamentoId: string, participanteId: string) {
+        setEmitindo(participanteId);
+        setMensagem("");
+        setErro(false);
+        try {
+            const response = await fetch(
+                `/api/treinamentos/${treinamentoId}/certificados/${participanteId}`,
+                { method: "POST" }
+            );
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Não foi possível emitir o certificado.");
+            }
+            setMensagem("Certificado " + data.certificado.numero + " emitido para " + data.certificado.nomeColaborador + ".");
+            await carregar();
+        } catch (error) {
+            setErro(true);
+            setMensagem(error instanceof Error ? error.message : "Erro ao emitir certificado.");
+        } finally {
+            setEmitindo(null);
         }
     }
 
@@ -292,8 +323,38 @@ export default function TreinamentosManager({ lojaId }: Props) {
                                 {treinamento.conteudo_programatico && (
                                     <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{treinamento.conteudo_programatico}</p>
                                 )}
-                                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes</p>
-                                <p className="mt-1 text-sm text-slate-700">{treinamento.participantes || "Nenhum participante informado"}</p>
+                                <div className="mt-4">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes e certificados</p>
+                                    {treinamento.participantesDetalhados.length === 0 ? (
+                                        <p className="text-sm text-slate-500">Nenhum participante informado.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {treinamento.participantesDetalhados.map((participante) => (
+                                                <div key={participante.id} className="flex flex-col gap-2 rounded-lg border border-slate-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-slate-800">{participante.nome}</p>
+                                                        {participante.cargo && <p className="text-xs text-slate-500">{participante.cargo}</p>}
+                                                        {participante.certificadoNumero && (
+                                                            <p className="mt-1 text-xs font-semibold text-emerald-700">Emitido: {participante.certificadoNumero}</p>
+                                                        )}
+                                                    </div>
+                                                    {participante.certificadoId ? (
+                                                        <span className="text-xs font-semibold text-emerald-700">Certificado emitido</span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => emitirCertificado(treinamento.id, participante.id)}
+                                                            disabled={emitindo !== null}
+                                                            className="rounded-lg bg-[#22365b] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#182947] disabled:cursor-not-allowed disabled:opacity-50"
+                                                        >
+                                                            {emitindo === participante.id ? "Emitindo..." : "Gerar certificado"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </article>
                         ))}
                     </div>
