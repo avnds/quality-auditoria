@@ -1,16 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
-
-function formatarData(valor: unknown) {
-    if (valor == null) return "Não informada";
-    const data = new Date(String(valor));
-    if (Number.isNaN(data.getTime())) return String(valor);
-    return data.toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
-}
+import CertificadosManager from "./CertificadosManager";
 
 export default async function CertificadosPage() {
     const usuario = await getCurrentUser();
@@ -29,39 +22,57 @@ export default async function CertificadosPage() {
     }
 
     const acessoAmplo = usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA";
+    const podeGerar = acessoAmplo && await temPermissao(usuario.id, "certificados.gerar");
     const result = await db.execute({
         sql: `
             SELECT
-                cert.id,
-                cert.numero,
-                cert.nome_colaborador,
-                cert.cargo_colaborador,
-                cert.nome_loja,
-                cert.nome_cliente,
-                cert.titulo_treinamento,
-                cert.data_realizacao,
-                cert.carga_horaria_minutos,
-                cert.emitido_em,
-                cert.arquivo_uri
-            FROM certificados cert
-            INNER JOIN treinamento_colaboradores tc
-                ON tc.id = cert.treinamento_colaborador_id
-            INNER JOIN treinamentos t
-                ON t.id = tc.treinamento_id
+                tc.id AS participante_id,
+                c.id AS cliente_id,
+                l.id AS loja_id,
+                t.id AS treinamento_id,
+                tc.nome_colaborador_snapshot AS nome_colaborador,
+                tc.cargo_snapshot AS cargo_colaborador,
+                l.nome AS nome_loja,
+                c.nome_fantasia AS nome_cliente,
+                t.titulo AS titulo_treinamento,
+                t.data_realizacao,
+                t.carga_horaria_minutos,
+                cert.id AS certificado_id,
+                cert.numero AS certificado_numero,
+                cert.emitido_em
+            FROM treinamento_colaboradores tc
+            INNER JOIN treinamentos t ON t.id = tc.treinamento_id
+            INNER JOIN lojas l ON l.id = t.loja_id
+            INNER JOIN clientes c ON c.id = l.cliente_id
+            LEFT JOIN certificados cert ON cert.treinamento_colaborador_id = tc.id
             WHERE (
                 ? = 1
                 OR EXISTS (
                     SELECT 1 FROM usuario_lojas ul
-                    WHERE ul.loja_id = t.loja_id
-                      AND ul.usuario_id = ?
+                    WHERE ul.loja_id = t.loja_id AND ul.usuario_id = ?
                 )
             )
-            ORDER BY cert.emitido_em DESC
+            ORDER BY t.data_realizacao DESC, tc.nome_colaborador_snapshot
         `,
         args: [acessoAmplo ? 1 : 0, usuario.id],
     });
 
-    const certificados = result.rows;
+    const certificados = result.rows.map((cert) => ({
+        participanteId: String(cert.participante_id),
+        clienteId: String(cert.cliente_id),
+        lojaId: String(cert.loja_id),
+        treinamentoId: String(cert.treinamento_id),
+        nomeColaborador: String(cert.nome_colaborador),
+        cargoColaborador: cert.cargo_colaborador == null ? null : String(cert.cargo_colaborador),
+        nomeLoja: String(cert.nome_loja),
+        nomeCliente: String(cert.nome_cliente),
+        tituloTreinamento: String(cert.titulo_treinamento),
+        dataRealizacao: String(cert.data_realizacao),
+        cargaHorariaMinutos: Number(cert.carga_horaria_minutos),
+        certificadoId: cert.certificado_id == null ? null : String(cert.certificado_id),
+        certificadoNumero: cert.certificado_numero == null ? null : String(cert.certificado_numero),
+        emitidoEm: cert.emitido_em == null ? null : String(cert.emitido_em),
+    }));
 
     return (
         <main className="min-h-screen bg-slate-50 p-6 sm:p-8">
@@ -70,61 +81,10 @@ export default async function CertificadosPage() {
                     <h1 className="text-3xl font-bold text-[#12223f]">Certificados</h1>
                     <div className="mt-2 h-1 w-20 rounded-full bg-[#c22a2e]" />
                     <p className="mt-3 text-slate-600">
-                        Consulte e baixe os certificados individuais emitidos para os participantes dos treinamentos.
+                        Consulte e emita certificados individuais dos participantes dos treinamentos.
                     </p>
                 </div>
-
-                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
-                        <div>
-                            <h2 className="text-lg font-semibold text-[#12223f]">Certificados emitidos</h2>
-                            <p className="mt-1 text-sm text-slate-500">{certificados.length} registro(s)</p>
-                        </div>
-                        <Link
-                            href="/treinamentos"
-                            className="inline-flex items-center justify-center rounded-lg bg-[#22365b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#182947]"
-                        >
-                            Gerar certificados
-                        </Link>
-                    </div>
-
-                    {certificados.length === 0 ? (
-                        <div className="px-6 py-12 text-center">
-                            <p className="font-medium text-slate-700">Nenhum certificado emitido ainda.</p>
-                            <p className="mt-2 text-sm text-slate-500">Clique em Gerar certificados para selecionar uma loja, acessar o histórico de treinamentos e emitir os PDFs dos participantes.</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-slate-100">
-                            {certificados.map((cert) => (
-                                <article key={String(cert.id)} className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="min-w-0">
-                                        <p className="font-semibold text-slate-800">{String(cert.nome_colaborador)}</p>
-                                        <p className="mt-1 text-sm text-slate-600">{String(cert.titulo_treinamento)}</p>
-                                        <p className="mt-1 text-xs text-slate-500">
-                                            {String(cert.nome_cliente)} · {String(cert.nome_loja)}
-                                        </p>
-                                        <p className="mt-1 text-xs text-slate-500">
-                                            Realizado em {formatarData(cert.data_realizacao)} · {Math.floor(Number(cert.carga_horaria_minutos) / 60)}h {Number(cert.carga_horaria_minutos) % 60}min
-                                        </p>
-                                        <p className="mt-1 text-xs font-medium text-slate-500">
-                                            Nº {String(cert.numero)} · Emitido em {formatarData(cert.emitido_em)}
-                                        </p>
-                                    </div>
-                                    {cert.arquivo_uri ? (
-                                        <a
-                                            href={`/api/certificados/${encodeURIComponent(String(cert.id))}/pdf`}
-                                            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#22365b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#182947]"
-                                        >
-                                            Baixar PDF
-                                        </a>
-                                    ) : (
-                                        <span className="max-w-xs text-xs text-slate-500">PDF não armazenado. Para baixar, gere novamente pelo histórico do treinamento.</span>
-                                    )}
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
+                <CertificadosManager certificados={certificados} podeGerar={podeGerar} />
             </div>
         </main>
     );
