@@ -13,6 +13,7 @@ type Treinamento = {
     id: string;
     titulo: string;
     data_realizacao: string;
+    validade_meses: number | null;
     carga_horaria_minutos: number;
     conteudo_programatico: string | null;
     ministrante: string;
@@ -28,6 +29,17 @@ const campo =
 function formatarData(data: string) {
     const [ano, mes, dia] = data.slice(0, 10).split("-");
     return dia && mes && ano ? `${dia}/${mes}/${ano}` : data;
+}
+
+function calcularVencimento(data: string, meses: number) {
+    const [ano, mes, dia] = data.slice(0, 10).split("-").map(Number);
+    const dataBase = new Date(Date.UTC(ano, mes - 1, 1));
+    const mesDestino = dataBase.getUTCMonth() + meses;
+    const anoDestino = dataBase.getUTCFullYear() + Math.floor(mesDestino / 12);
+    const numeroMes = ((mesDestino % 12) + 12) % 12;
+    const ultimoDia = new Date(Date.UTC(anoDestino, numeroMes + 1, 0)).getUTCDate();
+    const vencimento = new Date(Date.UTC(anoDestino, numeroMes, Math.min(dia, ultimoDia)));
+    return vencimento.toISOString().slice(0, 10);
 }
 
 function formatarCargaHoraria(minutos: number) {
@@ -51,6 +63,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
         return `${ano}-${mes}-${dia}`;
     });
     const [cargaHoraria, setCargaHoraria] = useState("4");
+    const [validadeMeses, setValidadeMeses] = useState("12");
     const [conteudoProgramatico, setConteudoProgramatico] = useState("");
     const [ministrante, setMinistrante] = useState("");
     const [carregando, setCarregando] = useState(true);
@@ -122,6 +135,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
                 body: JSON.stringify({
                     titulo,
                     dataRealizacao,
+                    validadeMeses: Number(validadeMeses),
                     cargaHorariaMinutos: minutos,
                     conteudoProgramatico,
                     ministrante,
@@ -136,6 +150,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
             setMensagem(data.message);
             setTitulo("Treinamento de Boas Práticas");
             setCargaHoraria("4");
+            setValidadeMeses("12");
             setConteudoProgramatico("");
             setSelecionados([]);
             await carregar();
@@ -169,6 +184,11 @@ export default function TreinamentosManager({ lojaId }: Props) {
                         <label className="text-sm font-medium text-slate-700">
                             Data de realização *
                             <input className={campo} type="date" value={dataRealizacao} onChange={(e) => setDataRealizacao(e.target.value)} required />
+                        </label>
+
+                        <label className="text-sm font-medium text-slate-700">
+                            Validade do treinamento (meses) *
+                            <input className={campo} type="number" min="1" max="120" step="1" value={validadeMeses} onChange={(e) => setValidadeMeses(e.target.value)} required />
                         </label>
 
                         <label className="text-sm font-medium text-slate-700">
@@ -260,6 +280,28 @@ export default function TreinamentosManager({ lojaId }: Props) {
                                         <h3 className="font-semibold text-slate-800">{treinamento.titulo}</h3>
                                         <p className="mt-1 text-sm text-slate-500">
                                             {formatarData(treinamento.data_realizacao)} · {formatarCargaHoraria(Number(treinamento.carga_horaria_minutos))} · Ministrante: {treinamento.ministrante}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            Validade: {treinamento.validade_meses ? `${treinamento.validade_meses} meses · vence em ${formatarData(calcularVencimento(treinamento.data_realizacao, treinamento.validade_meses))}` : "Não informada para este registro"}
+                                        </p>
+                                    </div>
+                                    <span className="w-fit rounded-full bg-[#22365b]/10 px-3 py-1 text-xs font-semibold text-[#22365b]">
+                                        {Number(treinamento.total_participantes)} participante(s)
+                                    </span>
+                                </div>
+                                {treinamento.conteudo_programatico && (
+                                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{treinamento.conteudo_programatico}</p>
+                                )}
+                                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes</p>
+                                <p className="mt-1 text-sm text-slate-700">{treinamento.participantes || "Nenhum participante informado"}</p>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+}
                                         </p>
                                     </div>
                                     <span className="w-fit rounded-full bg-[#22365b]/10 px-3 py-1 text-xs font-semibold text-[#22365b]">
