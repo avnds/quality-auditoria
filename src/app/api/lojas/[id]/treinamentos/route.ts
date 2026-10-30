@@ -172,6 +172,12 @@ export async function POST(request: Request, context: RouteContext) {
             );
         }
 
+        const colaboradores = colaboradoresResult.rows as Array<{
+            id: string | number;
+            nome: string;
+            cargo: string | null;
+        }>;
+
         const treinamentoId = crypto.randomUUID();
         const statements: InStatement[] = [
             {
@@ -194,7 +200,7 @@ export async function POST(request: Request, context: RouteContext) {
                     auth.usuario.id,
                 ] as InValue[],
             },
-            ...colaboradoresResult.rows.map((colaborador) => ({
+            ...colaboradores.map((colaborador) => ({
                 sql: `
                     INSERT INTO treinamento_colaboradores (
                         id, treinamento_id, colaborador_id,
