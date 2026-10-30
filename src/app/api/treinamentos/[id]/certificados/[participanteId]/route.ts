@@ -228,8 +228,8 @@ export async function POST(
             const logoAltura = logo.height * escala;
             pagina.drawImage(logo, { x: 62, y: 405, width: logo.width * escala, height: logoAltura });
             // Identificação centralizada horizontalmente abaixo do logotipo.
-            centralizar("Quality", 392, 11, negrito, azul, 128, 155);
-            centralizar("Consultorias em Alimentos", 380, 8, negrito, azul, 128, 155);
+            centralizar("Quality", 382, 11, negrito, azul, 95, 155);
+            centralizar("Consultorias em Alimentos", 370, 8, negrito, azul, 95, 155);
         } catch (error) {
             console.warn("Não foi possível incorporar o logotipo no certificado:", error);
             textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
