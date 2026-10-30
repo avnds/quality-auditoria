@@ -205,11 +205,19 @@ export async function POST(
         // Moldura dupla discreta; sem diagonais atravessando o conteúdo.
         pagina.drawRectangle({ x: 18, y: 18, width: largura - 36, height: 559.28, borderColor: azul, borderWidth: 5 });
         pagina.drawRectangle({ x: 27, y: 27, width: largura - 54, height: 541.28, borderColor: azul, borderWidth: 1 });
-        // Acabamentos geométricos pequenos e simétricos nos cantos.
-        pagina.drawRectangle({ x: 29, y: 548, width: 95, height: 5, color: vermelho });
-        pagina.drawRectangle({ x: 29, y: 539, width: 70, height: 4, color: azul });
-        pagina.drawRectangle({ x: 717, y: 42, width: 95, height: 5, color: vermelho });
-        pagina.drawRectangle({ x: 741, y: 51, width: 70, height: 4, color: azul });
+        // Moldura decorativa PNG transparente, nas cores da identidade Quality.
+        try {
+            const molduraBytes = await readFile(path.join(process.cwd(), "public", "moldura.png"));
+            const moldura = await pdf.embedPng(molduraBytes);
+            pagina.drawImage(moldura, {
+                x: 18,
+                y: 18,
+                width: largura - 36,
+                height: 559.28,
+            });
+        } catch (error) {
+            console.warn("Não foi possível incorporar public/moldura.png no certificado:", error);
+        }
 
         // Logotipo maior no topo esquerdo.
         try {
