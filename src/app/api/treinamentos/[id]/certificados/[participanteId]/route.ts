@@ -293,7 +293,7 @@ export async function POST(
             // Posicionamento da assinatura
             pagina.drawImage(assinatura, {
                 x: 267 - assinaturaLargura / 2,
-                y: 79,
+                y: 66,
                 width: assinaturaLargura,
                 height: assinaturaAltura,
             });
