@@ -283,9 +283,14 @@ export async function POST(
         try {
             const assinaturaBytes = await readFile(path.join(process.cwd(), "public", "assinatura_alaine.png"));
             const assinatura = await pdf.embedPng(assinaturaBytes);
-            const escala = Math.min(190 / assinatura.width, 31 / assinatura.height);
+
+            // Tamanho máximo da assinatura
+            const escala = Math.min(220 / assinatura.width, 48 / assinatura.height);
+
             const assinaturaLargura = assinatura.width * escala;
             const assinaturaAltura = assinatura.height * escala;
+
+            // Posicionamento da assinatura
             pagina.drawImage(assinatura, {
                 x: 267 - assinaturaLargura / 2,
                 y: 79,
