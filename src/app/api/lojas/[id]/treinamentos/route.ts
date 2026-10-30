@@ -51,6 +51,7 @@ export async function GET(_request: Request, context: RouteContext) {
                     t.loja_id,
                     t.titulo,
                     t.data_realizacao,
+                    t.validade_meses,
                     t.carga_horaria_minutos,
                     t.conteudo_programatico,
                     t.ministrante,
@@ -99,6 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
         const titulo = typeof body.titulo === "string" ? body.titulo.trim() : "";
         const dataRealizacao = typeof body.dataRealizacao === "string" ? body.dataRealizacao : "";
         const cargaHorariaMinutos = Number(body.cargaHorariaMinutos);
+        const validadeMeses = Number(body.validadeMeses);
         const conteudoProgramatico =
             typeof body.conteudoProgramatico === "string"
                 ? body.conteudoProgramatico.trim()
@@ -118,6 +120,13 @@ export async function POST(request: Request, context: RouteContext) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dataRealizacao) || Number.isNaN(Date.parse(dataRealizacao))) {
             return NextResponse.json(
                 { success: false, message: "Informe uma data de realização válida." },
+                { status: 400 }
+            );
+        }
+
+        if (!Number.isInteger(validadeMeses) || validadeMeses < 1 || validadeMeses > 120) {
+            return NextResponse.json(
+                { success: false, message: "A validade deve ser informada entre 1 e 120 meses." },
                 { status: 400 }
             );
         }
@@ -167,16 +176,17 @@ export async function POST(request: Request, context: RouteContext) {
             {
                 sql: `
                     INSERT INTO treinamentos (
-                        id, loja_id, titulo, data_realizacao,
+                        id, loja_id, titulo, data_realizacao, validade_meses,
                         carga_horaria_minutos, conteudo_programatico,
                         ministrante, criado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `,
                 args: [
                     treinamentoId,
                     lojaId,
                     titulo,
                     dataRealizacao,
+                    validadeMeses,
                     cargaHorariaMinutos,
                     conteudoProgramatico || null,
                     ministrante,
