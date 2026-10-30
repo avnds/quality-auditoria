@@ -231,7 +231,8 @@ export async function POST(
             textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
         }
 
-        centralizar("Quality Consultorias em Alimentos", 397, 9, negrito, azul, 128, 155);
+        centralizar("Quality", 397, 11, negrito, azul, 128, 155);
+        centralizar("Consultorias em Alimentos", 384, 8, negrito, azul, 128, 155);
 
         // Medalha PNG transparente enviada para public/Medalha.png.
         try {
