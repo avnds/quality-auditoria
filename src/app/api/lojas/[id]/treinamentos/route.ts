@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { InStatement } from "@libsql/client";
+import type { InStatement, InValue } from "@libsql/client";
 import db from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-permission";
 import {
@@ -192,7 +192,7 @@ export async function POST(request: Request, context: RouteContext) {
                     conteudoProgramatico || null,
                     ministrante,
                     auth.usuario.id,
-                ],
+                ] as InValue[],
             },
             ...colaboradoresResult.rows.map((colaborador) => ({
                 sql: `
@@ -207,7 +207,7 @@ export async function POST(request: Request, context: RouteContext) {
                     String(colaborador.id),
                     String(colaborador.nome),
                     colaborador.cargo === null ? null : String(colaborador.cargo),
-                ],
+                ] as InValue[],
             })),
         ];
 
