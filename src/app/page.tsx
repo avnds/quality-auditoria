@@ -467,9 +467,10 @@ export default async function Home() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {[...new Map(alertasTreinamentos.map((item) => [item.loja_id, item.loja_nome])).entries()].map(([lojaId, lojaNome]) => {
+                                {[...new Set(alertasTreinamentos.map((item) => item.loja_id))].map((lojaId) => {
                                     const itensDaLoja = alertasTreinamentos.filter((item) => item.loja_id === lojaId);
                                     const primeiro = itensDaLoja[0];
+                                    const lojaNome = primeiro.loja_nome;
                                     return (
                                         <div key={lojaId} className="rounded-xl border border-slate-200 p-4">
                                             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
