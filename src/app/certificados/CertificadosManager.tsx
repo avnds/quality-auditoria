@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 type Certificado = {
     participanteId: string;
+    clienteId: string;
+    lojaId: string;
     treinamentoId: string;
     nomeColaborador: string;
     cargoColaborador: string | null;
@@ -35,6 +37,11 @@ export default function CertificadosManager({ certificados: iniciais, podeGerar 
     const [filtroHistorico, setFiltroHistorico] = useState<FiltroHistorico>("mes");
     const [dataInicial, setDataInicial] = useState("");
     const [dataFinal, setDataFinal] = useState("");
+    const [clienteSelecionado, setClienteSelecionado] = useState("");
+    const [lojaSelecionada, setLojaSelecionada] = useState("");
+
+    const clientes = useMemo(() => Array.from(new Map(certificados.map((cert) => [cert.clienteId, { id: cert.clienteId, nome: cert.nomeCliente }])).values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [certificados]);
+    const lojas = useMemo(() => Array.from(new Map(certificados.filter((cert) => !clienteSelecionado || cert.clienteId === clienteSelecionado).map((cert) => [cert.lojaId, { id: cert.lojaId, nome: cert.nomeLoja, cliente: cert.nomeCliente }])).values()).sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR") || a.nome.localeCompare(b.nome, "pt-BR")), [certificados, clienteSelecionado]);
     const [emitindo, setEmitindo] = useState<string | null>(null);
     const [mensagem, setMensagem] = useState("");
     const [erro, setErro] = useState(false);
@@ -47,6 +54,8 @@ export default function CertificadosManager({ certificados: iniciais, podeGerar 
         const inicioSemanaISO = dataISO(inicioSemana);
         const inicioMesISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
         return certificados.filter((cert) => {
+            if (clienteSelecionado && cert.clienteId !== clienteSelecionado) return false;
+            if (lojaSelecionada && cert.lojaId !== lojaSelecionada) return false;
             const data = cert.dataRealizacao.slice(0, 10);
             if (filtroHistorico === "hoje") return data === hojeISO;
             if (filtroHistorico === "semana") return data >= inicioSemanaISO && data <= hojeISO;
@@ -57,7 +66,7 @@ export default function CertificadosManager({ certificados: iniciais, podeGerar 
             }
             return true;
         });
-    }, [certificados, filtroHistorico, dataInicial, dataFinal]);
+    }, [certificados, filtroHistorico, dataInicial, dataFinal, clienteSelecionado, lojaSelecionada]);
 
     async function emitirCertificado(cert: Certificado) {
         setEmitindo(cert.participanteId);
@@ -117,6 +126,20 @@ export default function CertificadosManager({ certificados: iniciais, podeGerar 
                             <option value="personalizado">Personalizado</option>
                         </select>
                     </div>
+                    <div className="w-full sm:max-w-xs">
+                        <label htmlFor="filtro-cliente-certificados" className="mb-1 block text-xs font-semibold text-slate-600">Cliente</label>
+                        <select id="filtro-cliente-certificados" value={clienteSelecionado} onChange={(e) => { setClienteSelecionado(e.target.value); setLojaSelecionada(""); }} className={campo}>
+                            <option value="">Todos os clientes</option>
+                            {clientes.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+                        </select>
+                    </div>
+                    <div className="w-full sm:max-w-xs">
+                        <label htmlFor="filtro-loja-certificados" className="mb-1 block text-xs font-semibold text-slate-600">Loja</label>
+                        <select id="filtro-loja-certificados" value={lojaSelecionada} onChange={(e) => setLojaSelecionada(e.target.value)} className={campo}>
+                            <option value="">Todas as lojas</option>
+                            {lojas.map((loja) => <option key={loja.id} value={loja.id}>{loja.nome} · {loja.cliente}</option>)}
+                        </select>
+                    </div>
                     {filtroHistorico === "personalizado" && (
                         <div className="grid w-full gap-3 sm:max-w-lg sm:grid-cols-2">
                             <label className="text-xs font-semibold text-slate-600">
@@ -138,7 +161,7 @@ export default function CertificadosManager({ certificados: iniciais, podeGerar 
             {certificados.length === 0 ? (
                 <p className="p-8 text-center text-sm text-slate-500">Nenhum participante de treinamento encontrado.</p>
             ) : filtrados.length === 0 ? (
-                <p className="p-8 text-center text-sm text-slate-500">Nenhum certificado encontrado para o período selecionado.</p>
+                <p className="p-8 text-center text-sm text-slate-500">Nenhum certificado encontrado para os filtros selecionados.</p>
             ) : (
                 <div className="divide-y divide-slate-100">
                     {filtrados.map((cert) => (
