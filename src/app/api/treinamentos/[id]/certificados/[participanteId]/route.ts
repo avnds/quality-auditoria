@@ -281,7 +281,7 @@ export async function POST(
         // Assinatura institucional e identificação profissional da supervisora.
         // A imagem fica acima da identificação, sem invadir os campos informativos.
         try {
-            const assinaturaBytes = await readFile(path.join(process.cwd(), "public", "assinatura.png"));
+            const assinaturaBytes = await readFile(path.join(process.cwd(), "public", "assinatura_alaine.png"));
             const assinatura = await pdf.embedPng(assinaturaBytes);
             const escala = Math.min(190 / assinatura.width, 31 / assinatura.height);
             const assinaturaLargura = assinatura.width * escala;
@@ -293,7 +293,7 @@ export async function POST(
                 height: assinaturaAltura,
             });
         } catch (error) {
-            console.warn("Não foi possível incorporar public/assinatura.png no certificado:", error);
+            console.warn("Não foi possível incorporar public/assinatura_alaine.png no certificado:", error);
         }
 
         // Bloco centralizado; a linha longa é ajustada à largura disponível.
