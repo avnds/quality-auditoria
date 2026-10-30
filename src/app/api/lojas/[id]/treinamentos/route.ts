@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { InStatement } from "@libsql/client";
 import db from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-permission";
 import {
@@ -172,7 +173,7 @@ export async function POST(request: Request, context: RouteContext) {
         }
 
         const treinamentoId = crypto.randomUUID();
-        const statements = [
+        const statements: InStatement[] = [
             {
                 sql: `
                     INSERT INTO treinamentos (
