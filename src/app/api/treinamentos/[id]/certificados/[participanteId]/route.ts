@@ -163,7 +163,11 @@ export async function POST(
         const loja = textoPdf(participante.loja_nome);
         const cliente = textoPdf(participante.cliente_nome);
         const ministrante = textoPdf(participante.ministrante);
-        const data = textoPdf(participante.data_realizacao);
+        const dataOriginal = String(participante.data_realizacao ?? "");
+        const dataMatch = dataOriginal.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+        const data = dataMatch
+            ? `${dataMatch[3]}/${dataMatch[2]}/${dataMatch[1]}`
+            : textoPdf(dataOriginal);
         const carga = Number(participante.carga_horaria_minutos);
         const conteudo = participante.conteudo_programatico == null
             ? ""
@@ -212,7 +216,8 @@ export async function POST(
             const logoBytes = await readFile(path.join(process.cwd(), "public", "icone1.png"));
             const logo = await pdf.embedPng(logoBytes);
             const escala = Math.min(132 / logo.width, 66 / logo.height);
-            pagina.drawImage(logo, { x: 62, y: 485, width: logo.width * escala, height: logo.height * escala });
+            // Alinha o centro vertical do logotipo ao centro da medalha.
+            pagina.drawImage(logo, { x: 62, y: 405, width: logo.width * escala, height: logo.height * escala });
         } catch (error) {
             console.warn("Não foi possível incorporar o logotipo no certificado:", error);
             textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
@@ -233,14 +238,14 @@ export async function POST(
             console.warn("Não foi possível incorporar public/Medalha.png no certificado:", error);
         }
 
-        centralizar("CERTIFICADO", 405, 36, negrito, azul, 430, 520);
-        pagina.drawLine({ start: { x: 300, y: 391 }, end: { x: 560, y: 391 }, thickness: 1.8, color: vermelho });
-        centralizar("CERTIFICAMOS QUE", 367, 12, negrito, azul, 430, 500);
-        centralizar(nome, 326, 27, negrito, azul, 430, 650);
-        if (cargo) centralizar(cargo, 307, 9, fonte, cinza, 430, 560);
-        centralizar("PARTICIPOU DO TREINAMENTO", 279, 11, negrito, azul, 430, 540);
-        centralizar(titulo, 249, 19, negrito, azul, 430, 690);
-        centralizar(`REALIZADO EM ${data}`, 226, 10, fonte, cinza, 430, 500);
+        centralizar("CERTIFICADO", 398, 36, negrito, azul, 430, 520);
+        pagina.drawLine({ start: { x: 300, y: 384 }, end: { x: 560, y: 384 }, thickness: 1.8, color: vermelho });
+        centralizar("CERTIFICAMOS QUE", 360, 12, negrito, azul, 430, 500);
+        centralizar(nome, 319, 27, negrito, azul, 430, 650);
+        if (cargo) centralizar(cargo, 300, 9, fonte, cinza, 430, 560);
+        centralizar("PARTICIPOU DO TREINAMENTO", 272, 11, negrito, azul, 430, 540);
+        centralizar(titulo, 242, 19, negrito, azul, 430, 690);
+        centralizar(`REALIZADO EM ${data}`, 219, 10, fonte, cinza, 430, 500);
 
         // Quatro campos informativos com divisórias verticais regulares.
         pagina.drawLine({ start: { x: 72, y: 197 }, end: { x: 770, y: 197 }, thickness: 1, color: azul });
@@ -264,13 +269,13 @@ export async function POST(
         }
 
         // Assinaturas: o nome fica imediatamente abaixo da linha correspondente.
-        const linhaY = 57;
+        const linhaY = 76;
         pagina.drawLine({ start: { x: 145, y: linhaY }, end: { x: 390, y: linhaY }, thickness: 1.2, color: azul });
         pagina.drawLine({ start: { x: 452, y: linhaY }, end: { x: 697, y: linhaY }, thickness: 1.2, color: azul });
-        centralizar(ministrante, 40, 9, negrito, azul, 267, 235);
-        centralizar("RESPONSÁVEL PELO TREINAMENTO", 27, 7.5, fonte, cinza, 267, 235);
-        centralizar(nome, 40, 9, negrito, azul, 574, 235);
-        centralizar("PARTICIPANTE", 27, 7.5, fonte, cinza, 574, 235);
+        centralizar(ministrante, 59, 9, negrito, azul, 267, 235);
+        centralizar("RESPONSÁVEL PELO TREINAMENTO", 45, 7.5, fonte, cinza, 267, 235);
+        centralizar(nome, 59, 9, negrito, azul, 574, 235);
+        centralizar("PARTICIPANTE", 45, 7.5, fonte, cinza, 574, 235);
 
         const bytes = Buffer.from(await pdf.save());
         const caminho = `certificados/${lojaId}/${certificadoId}.pdf`;
