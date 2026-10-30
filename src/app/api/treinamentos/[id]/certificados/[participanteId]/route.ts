@@ -271,12 +271,35 @@ export async function POST(
             linhasConteudo.forEach((linha, indice) => centralizar(linha, 91 - indice * 11, 7.5, fonte, cinza, 430, 680));
         }
 
-        // Assinaturas: o nome fica imediatamente abaixo da linha correspondente.
-        const linhaY = 76;
-        pagina.drawLine({ start: { x: 145, y: linhaY }, end: { x: 390, y: linhaY }, thickness: 1.2, color: azul });
-        pagina.drawLine({ start: { x: 452, y: linhaY }, end: { x: 697, y: linhaY }, thickness: 1.8, color: branco });
-        centralizar(ministrante, 59, 9, negrito, azul, 267, 235);
-        centralizar("RESPONSÁVEL PELO TREINAMENTO", 45, 7.5, fonte, cinza, 267, 235);
+        // Assinatura institucional e identificação profissional da supervisora.
+        // A imagem fica acima da identificação, sem invadir os campos informativos.
+        try {
+            const assinaturaBytes = await readFile(path.join(process.cwd(), "public", "assinatura.png"));
+            const assinatura = await pdf.embedPng(assinaturaBytes);
+            const escala = Math.min(190 / assinatura.width, 31 / assinatura.height);
+            const assinaturaLargura = assinatura.width * escala;
+            const assinaturaAltura = assinatura.height * escala;
+            pagina.drawImage(assinatura, {
+                x: 267 - assinaturaLargura / 2,
+                y: 79,
+                width: assinaturaLargura,
+                height: assinaturaAltura,
+            });
+        } catch (error) {
+            console.warn("Não foi possível incorporar public/assinatura.png no certificado:", error);
+        }
+
+        // Bloco centralizado; a linha longa é ajustada à largura disponível.
+        // Em linhas isoladas, justificar criaria espaços artificiais entre palavras.
+        pagina.drawLine({ start: { x: 145, y: 76 }, end: { x: 390, y: 76 }, thickness: 0.8, color: azul });
+        centralizar("Alaine de Sa Bezerril", 64, 8, negrito, azul, 267, 250);
+        centralizar("Tecnologa em Alimentos", 54, 7, fonte, cinza, 267, 250);
+        centralizar("Especialista em Gestao da Qualidade", 44, 6.5, fonte, cinza, 267, 250);
+        centralizar("e Seguranca dos Alimentos", 36, 6.5, fonte, cinza, 267, 250);
+        centralizar("CREA: 340650", 28, 7, negrito, azul, 267, 250);
+
+        // Mantém a assinatura do participante sobre a faixa azul.
+        pagina.drawLine({ start: { x: 452, y: 76 }, end: { x: 697, y: 76 }, thickness: 1.8, color: branco });
         centralizar(nome, 59, 9, negrito, branco, 574, 235);
         centralizar("PARTICIPANTE", 45, 7.5, negrito, branco, 574, 235);
 
