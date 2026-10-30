@@ -172,11 +172,13 @@ export async function POST(request: Request, context: RouteContext) {
             );
         }
 
-        const colaboradores = colaboradoresResult.rows as Array<{
-            id: string | number;
-            nome: string;
-            cargo: string | null;
-        }>;
+        const colaboradores = colaboradoresResult.rows.map((row) => ({
+            id: String(row["id"]),
+            nome: String(row["nome"]),
+            cargo: row["cargo"] === null || row["cargo"] === undefined
+                ? null
+                : String(row["cargo"]),
+        }));
 
         const treinamentoId = crypto.randomUUID();
         const statements: InStatement[] = [
