@@ -1,0 +1,275 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+type Colaborador = {
+    id: string;
+    nome: string;
+    cargo: string | null;
+    ativo: number;
+};
+
+type Treinamento = {
+    id: string;
+    titulo: string;
+    data_realizacao: string;
+    carga_horaria_minutos: number;
+    conteudo_programatico: string | null;
+    ministrante: string;
+    total_participantes: number;
+    participantes: string | null;
+};
+
+type Props = { lojaId: string };
+
+const campo =
+    "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-[#22365b] focus:ring-2 focus:ring-[#22365b]/10";
+
+function formatarData(data: string) {
+    const [ano, mes, dia] = data.slice(0, 10).split("-");
+    return dia && mes && ano ? `${dia}/${mes}/${ano}` : data;
+}
+
+function formatarCargaHoraria(minutos: number) {
+    const horas = Math.floor(minutos / 60);
+    const resto = minutos % 60;
+    if (horas && resto) return `${horas}h ${resto}min`;
+    if (horas) return `${horas}h`;
+    return `${resto}min`;
+}
+
+export default function TreinamentosManager({ lojaId }: Props) {
+    const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+    const [treinamentos, setTreinamentos] = useState<Treinamento[]>([]);
+    const [selecionados, setSelecionados] = useState<string[]>([]);
+    const [titulo, setTitulo] = useState("Treinamento de Boas Práticas");
+    const [dataRealizacao, setDataRealizacao] = useState(new Date().toLocaleDateString("en-CA"));
+    const [cargaHoraria, setCargaHoraria] = useState("4");
+    const [conteudoProgramatico, setConteudoProgramatico] = useState("");
+    const [ministrante, setMinistrante] = useState("");
+    const [carregando, setCarregando] = useState(true);
+    const [salvando, setSalvando] = useState(false);
+    const [mensagem, setMensagem] = useState("");
+    const [erro, setErro] = useState(false);
+
+    const carregar = useCallback(async () => {
+        const [colaboradoresResponse, treinamentosResponse] = await Promise.all([
+            fetch(`/api/lojas/${lojaId}/colaboradores`),
+            fetch(`/api/lojas/${lojaId}/treinamentos`),
+        ]);
+        const [colaboradoresData, treinamentosData] = await Promise.all([
+            colaboradoresResponse.json(),
+            treinamentosResponse.json(),
+        ]);
+
+        if (!colaboradoresResponse.ok || !colaboradoresData.success) {
+            throw new Error(colaboradoresData.message || "Não foi possível carregar os colaboradores.");
+        }
+        if (!treinamentosResponse.ok || !treinamentosData.success) {
+            throw new Error(treinamentosData.message || "Não foi possível carregar os treinamentos.");
+        }
+
+        setColaboradores(colaboradoresData.colaboradores);
+        setTreinamentos(treinamentosData.treinamentos);
+    }, [lojaId]);
+
+    useEffect(() => {
+        let ativo = true;
+        carregar()
+            .catch((error: unknown) => {
+                if (ativo) {
+                    setErro(true);
+                    setMensagem(error instanceof Error ? error.message : "Erro ao carregar os dados.");
+                }
+            })
+            .finally(() => {
+                if (ativo) setCarregando(false);
+            });
+        return () => {
+            ativo = false;
+        };
+    }, [carregar]);
+
+    function alternarColaborador(id: string) {
+        setSelecionados((atuais) =>
+            atuais.includes(id)
+                ? atuais.filter((item) => item !== id)
+                : [...atuais, id]
+        );
+    }
+
+    async function salvar(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setSalvando(true);
+        setMensagem("");
+        setErro(false);
+
+        try {
+            const minutos = Math.round(Number(cargaHoraria.replace(",", ".")) * 60);
+            if (!Number.isFinite(minutos) || minutos <= 0) {
+                throw new Error("Informe uma carga horária válida.");
+            }
+
+            const response = await fetch(`/api/lojas/${lojaId}/treinamentos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    titulo,
+                    dataRealizacao,
+                    cargaHorariaMinutos: minutos,
+                    conteudoProgramatico,
+                    ministrante,
+                    colaboradorIds: selecionados,
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Não foi possível registrar o treinamento.");
+            }
+
+            setMensagem(data.message);
+            setTitulo("Treinamento de Boas Práticas");
+            setCargaHoraria("4");
+            setConteudoProgramatico("");
+            setSelecionados([]);
+            await carregar();
+        } catch (error) {
+            setErro(true);
+            setMensagem(error instanceof Error ? error.message : "Erro ao registrar treinamento.");
+        } finally {
+            setSalvando(false);
+        }
+    }
+
+    const ativos = colaboradores.filter((colaborador) => colaborador.ativo === 1);
+
+    return (
+        <div className="space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div>
+                    <h2 className="text-xl font-semibold text-[#12223f]">Registrar treinamento</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Informe os dados da capacitação e marque os colaboradores que participaram.
+                    </p>
+                </div>
+
+                <form onSubmit={salvar} className="mt-6 space-y-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+                            Título do treinamento *
+                            <input className={campo} value={titulo} onChange={(e) => setTitulo(e.target.value)} required maxLength={180} />
+                        </label>
+
+                        <label className="text-sm font-medium text-slate-700">
+                            Data de realização *
+                            <input className={campo} type="date" value={dataRealizacao} onChange={(e) => setDataRealizacao(e.target.value)} required />
+                        </label>
+
+                        <label className="text-sm font-medium text-slate-700">
+                            Carga horária (horas) *
+                            <input className={campo} type="number" min="0.25" max="24" step="0.25" value={cargaHoraria} onChange={(e) => setCargaHoraria(e.target.value)} required />
+                        </label>
+
+                        <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+                            Ministrante *
+                            <input className={campo} value={ministrante} onChange={(e) => setMinistrante(e.target.value)} required maxLength={180} placeholder="Nome do responsável pelo treinamento" />
+                        </label>
+
+                        <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+                            Conteúdo programático
+                            <textarea className={campo} rows={4} value={conteudoProgramatico} onChange={(e) => setConteudoProgramatico(e.target.value)} maxLength={5000} placeholder="Descreva os assuntos abordados no treinamento..." />
+                        </label>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                            <div>
+                                <h3 className="font-semibold text-[#12223f]">Participantes *</h3>
+                                <p className="text-xs text-slate-500">Somente colaboradores ativos desta loja.</p>
+                            </div>
+                            <span className="rounded-full bg-[#22365b]/10 px-3 py-1 text-xs font-semibold text-[#22365b]">
+                                {selecionados.length} selecionado(s)
+                            </span>
+                        </div>
+
+                        {ativos.length === 0 ? (
+                            <p className="p-5 text-sm text-slate-500">
+                                Não há colaboradores ativos cadastrados. Cadastre ou reative colaboradores antes de registrar o treinamento.
+                            </p>
+                        ) : (
+                            <div className="grid gap-1 p-3 sm:grid-cols-2">
+                                {ativos.map((colaborador) => (
+                                    <label key={colaborador.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-3 transition hover:bg-slate-50">
+                                        <input
+                                            type="checkbox"
+                                            checked={selecionados.includes(colaborador.id)}
+                                            onChange={() => alternarColaborador(colaborador.id)}
+                                            className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-[#22365b]"
+                                        />
+                                        <span>
+                                            <span className="block text-sm font-semibold text-slate-800">{colaborador.nome}</span>
+                                            {colaborador.cargo && <span className="block text-xs text-slate-500">{colaborador.cargo}</span>}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={salvando || ativos.length === 0 || selecionados.length === 0}
+                            className="rounded-lg bg-[#22365b] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182947] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {salvando ? "Registrando..." : "Registrar treinamento"}
+                        </button>
+                        <span className="text-xs text-slate-500">Após registrar, os participantes ficam vinculados ao histórico desta capacitação.</span>
+                    </div>
+                </form>
+
+                {mensagem && (
+                    <p role="status" className={`mt-4 rounded-lg px-4 py-3 text-sm ${erro ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+                        {mensagem}
+                    </p>
+                )}
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 px-6 py-4">
+                    <h2 className="text-xl font-semibold text-[#12223f]">Histórico de treinamentos</h2>
+                    <p className="mt-1 text-sm text-slate-500">Registros anteriores e respectivos participantes.</p>
+                </div>
+
+                {carregando ? (
+                    <p className="p-6 text-sm text-slate-500">Carregando histórico...</p>
+                ) : treinamentos.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-slate-500">Nenhum treinamento registrado para esta loja.</p>
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {treinamentos.map((treinamento) => (
+                            <article key={treinamento.id} className="px-6 py-5">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <h3 className="font-semibold text-slate-800">{treinamento.titulo}</h3>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            {formatarData(treinamento.data_realizacao)} · {formatarCargaHoraria(Number(treinamento.carga_horaria_minutos))} · Ministrante: {treinamento.ministrante}
+                                        </p>
+                                    </div>
+                                    <span className="w-fit rounded-full bg-[#22365b]/10 px-3 py-1 text-xs font-semibold text-[#22365b]">
+                                        {Number(treinamento.total_participantes)} participante(s)
+                                    </span>
+                                </div>
+                                {treinamento.conteudo_programatico && (
+                                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{treinamento.conteudo_programatico}</p>
+                                )}
+                                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes</p>
+                                <p className="mt-1 text-sm text-slate-700">{treinamento.participantes || "Nenhum participante informado"}</p>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+}
