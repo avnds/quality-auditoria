@@ -177,21 +177,19 @@ export async function POST(
         const fonte = await pdf.embedFont(StandardFonts.Helvetica);
         const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-        // A4 horizontal (paisagem), conforme o modelo de certificado.
+        // A4 horizontal (paisagem), com composição limpa e medalha institucional.
         const pagina = pdf.addPage([841.89, 595.28]);
         const largura = pagina.getWidth();
-        const altura = pagina.getHeight();
         const azul = rgb(34 / 255, 54 / 255, 91 / 255);
         const vermelho = rgb(194 / 255, 42 / 255, 46 / 255);
-        const cinza = rgb(0.32, 0.36, 0.42);
-        const dourado = rgb(0.72, 0.58, 0.32);
+        const cinza = rgb(0.25, 0.29, 0.36);
         const branco = rgb(1, 1, 1);
 
-        const centralizar = (texto: string, y: number, tamanho: number, font = fonte, cor = azul) => {
+        const centralizar = (texto: string, y: number, tamanho: number, font = fonte, cor = azul, centro = largura / 2, limite = largura - 120) => {
             let size = tamanho;
-            while (size > 7 && font.widthOfTextAtSize(texto, size) > largura - 150) size -= 0.5;
+            while (size > 7 && font.widthOfTextAtSize(texto, size) > limite) size -= 0.5;
             const w = font.widthOfTextAtSize(texto, size);
-            pagina.drawText(texto, { x: (largura - w) / 2, y, size, font, color: cor });
+            pagina.drawText(texto, { x: centro - w / 2, y, size, font, color: cor });
         };
         const textoLimitado = (texto: string, x: number, y: number, maxWidth: number, tamanho: number, font = fonte, cor = cinza) => {
             let size = tamanho;
@@ -199,63 +197,81 @@ export async function POST(
             pagina.drawText(texto, { x, y, size, font, color: cor, maxWidth });
         };
 
-        pagina.drawRectangle({ x: 0, y: 0, width: largura, height: altura, color: branco });
-        pagina.drawRectangle({ x: 20, y: 20, width: largura - 40, height: altura - 40, borderColor: azul, borderWidth: 4 });
-        pagina.drawRectangle({ x: 29, y: 29, width: largura - 58, height: altura - 58, borderColor: vermelho, borderWidth: 1 });
+        pagina.drawRectangle({ x: 0, y: 0, width: largura, height: 595.28, color: branco });
+        // Moldura dupla discreta; sem diagonais atravessando o conteúdo.
+        pagina.drawRectangle({ x: 18, y: 18, width: largura - 36, height: 559.28, borderColor: azul, borderWidth: 5 });
+        pagina.drawRectangle({ x: 27, y: 27, width: largura - 54, height: 541.28, borderColor: azul, borderWidth: 1 });
+        // Acabamentos geométricos pequenos e simétricos nos cantos.
+        pagina.drawRectangle({ x: 29, y: 548, width: 95, height: 5, color: vermelho });
+        pagina.drawRectangle({ x: 29, y: 539, width: 70, height: 4, color: azul });
+        pagina.drawRectangle({ x: 717, y: 42, width: 95, height: 5, color: vermelho });
+        pagina.drawRectangle({ x: 741, y: 51, width: 70, height: 4, color: azul });
 
-        // Detalhes diagonais nos cantos, mantendo a paleta institucional.
-        pagina.drawLine({ start: { x: 30, y: 485 }, end: { x: 145, y: 565 }, thickness: 17, color: azul });
-        pagina.drawLine({ start: { x: 30, y: 507 }, end: { x: 112, y: 565 }, thickness: 5, color: vermelho });
-        pagina.drawLine({ start: { x: 700, y: 30 }, end: { x: 815, y: 108 }, thickness: 17, color: azul });
-        pagina.drawLine({ start: { x: 750, y: 30 }, end: { x: 815, y: 74 }, thickness: 5, color: vermelho });
-
-        // Logotipo institucional.
+        // Logotipo maior no topo esquerdo.
         try {
             const logoBytes = await readFile(path.join(process.cwd(), "public", "icone1.png"));
             const logo = await pdf.embedPng(logoBytes);
-            const d = logo.scale(1);
-            const escala = Math.min(72 / d.width, 48 / d.height, 1);
-            pagina.drawImage(logo, { x: 58, y: 490, width: d.width * escala, height: d.height * escala });
+            const escala = Math.min(132 / logo.width, 66 / logo.height);
+            pagina.drawImage(logo, { x: 62, y: 485, width: logo.width * escala, height: logo.height * escala });
         } catch (error) {
             console.warn("Não foi possível incorporar o logotipo no certificado:", error);
+            textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
         }
 
-        textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 145, 518, 330, 12, negrito, azul);
-        centralizar("CERTIFICADO", 421, 34, negrito, azul);
-        pagina.drawLine({ start: { x: 335, y: 409 }, end: { x: 507, y: 409 }, thickness: 2, color: vermelho });
-        centralizar("Certificamos que", 382, 13, fonte, cinza);
-        centralizar(nome, 338, 26, negrito, azul);
-        if (cargo) centralizar(cargo, 316, 10, fonte, cinza);
-        centralizar("participou do treinamento", 286, 12, fonte, cinza);
-        centralizar(titulo, 258, 18, negrito, azul);
-        centralizar(`realizado em ${data}`, 234, 11, fonte, cinza);
+        // Medalha PNG transparente enviada para public/Medalha.png.
+        try {
+            const medalhaBytes = await readFile(path.join(process.cwd(), "public", "Medalha.png"));
+            const medalha = await pdf.embedPng(medalhaBytes);
+            const escala = Math.min(112 / medalha.width, 132 / medalha.height);
+            pagina.drawImage(medalha, {
+                x: 738 - (medalha.width * escala) / 2,
+                y: 438 - (medalha.height * escala) / 2,
+                width: medalha.width * escala,
+                height: medalha.height * escala,
+            });
+        } catch (error) {
+            console.warn("Não foi possível incorporar public/Medalha.png no certificado:", error);
+        }
 
-        // Dados complementares em uma faixa horizontal.
-        pagina.drawLine({ start: { x: 75, y: 198 }, end: { x: 767, y: 198 }, thickness: 1, color: dourado });
+        centralizar("CERTIFICADO", 405, 36, negrito, azul, 430, 520);
+        pagina.drawLine({ start: { x: 300, y: 391 }, end: { x: 560, y: 391 }, thickness: 1.8, color: vermelho });
+        centralizar("CERTIFICAMOS QUE", 367, 12, negrito, azul, 430, 500);
+        centralizar(nome, 326, 27, negrito, azul, 430, 650);
+        if (cargo) centralizar(cargo, 307, 9, fonte, cinza, 430, 560);
+        centralizar("PARTICIPOU DO TREINAMENTO", 279, 11, negrito, azul, 430, 540);
+        centralizar(titulo, 249, 19, negrito, azul, 430, 690);
+        centralizar(`REALIZADO EM ${data}`, 226, 10, fonte, cinza, 430, 500);
+
+        // Quatro campos informativos com divisórias verticais regulares.
+        pagina.drawLine({ start: { x: 72, y: 197 }, end: { x: 770, y: 197 }, thickness: 1, color: azul });
         const dados = [
-            { x: 92, w: 175, label: "EMPRESA / LOJA", value: `${cliente} - ${loja}` },
-            { x: 292, w: 125, label: "CARGA HORÁRIA", value: `${Math.floor(carga / 60)}h ${carga % 60}min` },
-            { x: 450, w: 125, label: "MINISTRANTE", value: ministrante },
-            { x: 608, w: 150, label: "CERTIFICADO", value: numero },
+            { x: 82, w: 164, label: "EMPRESA / LOJA", value: `${cliente} - ${loja}` },
+            { x: 270, w: 125, label: "CARGA HORÁRIA", value: `${Math.floor(carga / 60)}h ${carga % 60}min` },
+            { x: 425, w: 140, label: "MINISTRANTE", value: ministrante },
+            { x: 595, w: 160, label: "Nº DO CERTIFICADO", value: numero },
         ];
         for (let i = 0; i < dados.length; i++) {
             const item = dados[i];
-            if (i > 0) pagina.drawLine({ start: { x: item.x - 15, y: 112 }, end: { x: item.x - 15, y: 187 }, thickness: 0.8, color: dourado });
+            if (i > 0) pagina.drawLine({ start: { x: item.x - 13, y: 112 }, end: { x: item.x - 13, y: 184 }, thickness: 0.8, color: azul });
             textoLimitado(item.label, item.x, 174, item.w, 8, negrito, azul);
-            for (const [linha, indice] of quebrarTexto(item.value, 27).slice(0, 2).map((v, idx) => [v, idx] as const)) {
-                textoLimitado(linha, item.x, 151 - indice * 13, item.w, 9, fonte, cinza);
-            }
+            const linhas = quebrarTexto(item.value, 25).slice(0, 2);
+            linhas.forEach((linha, indice) => textoLimitado(linha, item.x, 151 - indice * 13, item.w, 9, fonte, cinza));
         }
 
         if (conteudo.trim()) {
-            textoLimitado(`CONTEÚDO PROGRAMÁTICO: ${textoPdf(conteudo)}`, 92, 91, 650, 8, fonte, cinza);
+            const linhasConteudo = quebrarTexto(`CONTEÚDO: ${textoPdf(conteudo)}`, 105).slice(0, 2);
+            linhasConteudo.forEach((linha, indice) => centralizar(linha, 91 - indice * 11, 7.5, fonte, cinza, 430, 680));
         }
 
-        // Assinaturas lado a lado, como no modelo de referência.
-        pagina.drawLine({ start: { x: 175, y: 65 }, end: { x: 390, y: 65 }, thickness: 1, color: azul });
-        pagina.drawLine({ start: { x: 452, y: 65 }, end: { x: 667, y: 65 }, thickness: 1, color: azul });
-        centralizar("RESPONSÁVEL PELO TREINAMENTO", 49, 8, negrito, azul);
-        textoLimitado("PARTICIPANTE", 520, 49, 100, 8, negrito, azul);
+        // Assinaturas: o nome fica imediatamente abaixo da linha correspondente.
+        const linhaY = 57;
+        pagina.drawLine({ start: { x: 145, y: linhaY }, end: { x: 390, y: linhaY }, thickness: 1.2, color: azul });
+        pagina.drawLine({ start: { x: 452, y: linhaY }, end: { x: 697, y: linhaY }, thickness: 1.2, color: azul });
+        centralizar(ministrante, 40, 9, negrito, azul, 267, 235);
+        centralizar("RESPONSÁVEL PELO TREINAMENTO", 27, 7.5, fonte, cinza, 267, 235);
+        centralizar(nome, 40, 9, negrito, azul, 574, 235);
+        centralizar("PARTICIPANTE", 27, 7.5, fonte, cinza, 574, 235);
+
         const bytes = Buffer.from(await pdf.save());
         const caminho = `certificados/${lojaId}/${certificadoId}.pdf`;
         const arquivo = await put(caminho, bytes, {
