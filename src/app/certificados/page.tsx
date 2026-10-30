@@ -27,6 +27,8 @@ export default async function CertificadosPage() {
         sql: `
             SELECT
                 tc.id AS participante_id,
+                c.id AS cliente_id,
+                l.id AS loja_id,
                 t.id AS treinamento_id,
                 tc.nome_colaborador_snapshot AS nome_colaborador,
                 tc.cargo_snapshot AS cargo_colaborador,
@@ -57,6 +59,8 @@ export default async function CertificadosPage() {
 
     const certificados = result.rows.map((cert) => ({
         participanteId: String(cert.participante_id),
+        clienteId: String(cert.cliente_id),
+        lojaId: String(cert.loja_id),
         treinamentoId: String(cert.treinamento_id),
         nomeColaborador: String(cert.nome_colaborador),
         cargoColaborador: cert.cargo_colaborador == null ? null : String(cert.cargo_colaborador),
