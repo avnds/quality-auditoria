@@ -44,6 +44,11 @@ const itensMenu: ItemMenu[] = [
         permissao: "checklists.visualizar",
     },
     {
+        nome: "Treinamentos",
+        href: "/treinamentos",
+        permissao: "treinamentos.visualizar",
+    },
+    {
         nome: "Certificados",
         href: "/certificados",
         permissao: "certificados.visualizar",
