@@ -22,6 +22,20 @@ type Indicador = {
     href?: string;
 };
 
+type AlertaTreinamento = {
+    id: string;
+    titulo: string;
+    data_realizacao: string;
+    validade_meses: number;
+    vencimento: string;
+    diasRestantes: number;
+    loja_id: string;
+    loja_nome: string;
+    cliente_id: string;
+    cliente_nome: string;
+    participantes: string | null;
+};
+
 const STATUS_LABELS: Record<string, string> = {
     ABERTA: "Aberta",
     EM_CORRECAO: "Em correção",
@@ -30,6 +44,27 @@ const STATUS_LABELS: Record<string, string> = {
     DEVOLVIDA: "Devolvida",
     CANCELADA: "Cancelada",
 };
+
+function dataISOHoje() {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Fortaleza",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(new Date());
+    const parte = (tipo: string) => partes.find((item) => item.type === tipo)?.value ?? "";
+    return `${parte("year")}-${parte("month")}-${parte("day")}`;
+}
+
+function calcularVencimento(data: string, meses: number) {
+    const [ano, mes, dia] = data.slice(0, 10).split("-").map(Number);
+    const dataBase = new Date(Date.UTC(ano, mes - 1, 1));
+    const mesDestino = dataBase.getUTCMonth() + meses;
+    const anoDestino = dataBase.getUTCFullYear() + Math.floor(mesDestino / 12);
+    const numeroMes = ((mesDestino % 12) + 12) % 12;
+    const ultimoDia = new Date(Date.UTC(anoDestino, numeroMes + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(anoDestino, numeroMes, Math.min(dia, ultimoDia))).toISOString().slice(0, 10);
+}
 
 function formatarData(valor: string) {
     if (!valor) return "—";
@@ -165,6 +200,7 @@ export default async function Home() {
     let totalAguardando = 0;
     let totalCorrecao = 0;
     let totalAbertas = 0;
+    let alertasTreinamentos: AlertaTreinamento[] = [];
 
     if (ehMaster || ehSupervisora) {
         const [clientes, lojas, usuariosAtivos, auditoriasStatus] = await Promise.all([
@@ -200,6 +236,52 @@ export default async function Home() {
         totalAguardando = totaisStatus.get("ENVIADA") ?? 0;
         totalCorrecao = totaisStatus.get("EM_CORRECAO") ?? 0;
         totalAbertas = totaisStatus.get("ABERTA") ?? 0;
+    }
+
+    if (ehSupervisora && await temPermissao(usuario.id, "treinamentos.visualizar")) {
+        const treinamentosResult = await db.execute(`
+            SELECT
+                t.id,
+                t.titulo,
+                t.data_realizacao,
+                t.validade_meses,
+                l.id AS loja_id,
+                l.nome AS loja_nome,
+                l.cliente_id,
+                c.nome_fantasia AS cliente_nome,
+                GROUP_CONCAT(tc.nome_colaborador_snapshot, ' | ') AS participantes
+            FROM treinamentos t
+            INNER JOIN lojas l ON l.id = t.loja_id
+            INNER JOIN clientes c ON c.id = l.cliente_id
+            LEFT JOIN treinamento_colaboradores tc ON tc.treinamento_id = t.id
+            WHERE t.validade_meses IS NOT NULL
+            GROUP BY t.id
+            ORDER BY t.data_realizacao DESC
+        `);
+
+        const hoje = dataISOHoje();
+        const hojeMs = Date.parse(`${hoje}T00:00:00Z`);
+        alertasTreinamentos = treinamentosResult.rows
+            .map((linha) => {
+                const dataRealizacao = String(linha.data_realizacao).slice(0, 10);
+                const validadeMeses = Number(linha.validade_meses);
+                const vencimento = calcularVencimento(dataRealizacao, validadeMeses);
+                const diasRestantes = Math.round((Date.parse(`${vencimento}T00:00:00Z`) - hojeMs) / 86400000);
+                return {
+                    id: String(linha.id),
+                    titulo: String(linha.titulo),
+                    data_realizacao: dataRealizacao,
+                    validade_meses: validadeMeses,
+                    vencimento,
+                    diasRestantes,
+                    loja_id: String(linha.loja_id),
+                    loja_nome: String(linha.loja_nome),
+                    cliente_id: String(linha.cliente_id),
+                    cliente_nome: String(linha.cliente_nome),
+                    participantes: linha.participantes == null ? null : String(linha.participantes),
+                };
+            })
+            .filter((treinamento) => treinamento.diasRestantes <= 30);
     }
 
     if (podeVerAuditorias) {
@@ -371,6 +453,66 @@ export default async function Home() {
                 ) : null}
 
                 {ehSupervisora ? (
+                    <>
+                    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                        <SecaoTitulo
+                            titulo="Validade dos treinamentos"
+                            descricao="Treinamentos vencidos ou com vencimento nos próximos 30 dias, organizados por loja."
+                            href="/treinamentos"
+                            linkTexto="Ver treinamentos"
+                        />
+                        {alertasTreinamentos.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                                Nenhum treinamento vencido ou próximo do vencimento.
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {[...new Set(alertasTreinamentos.map((item) => item.loja_id))].map((lojaId) => {
+                                    const itensDaLoja = alertasTreinamentos.filter((item) => item.loja_id === lojaId);
+                                    const primeiro = itensDaLoja[0];
+                                    const lojaNome = primeiro.loja_nome;
+                                    return (
+                                        <div key={lojaId} className="rounded-xl border border-slate-200 p-4">
+                                            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-[#12223f]">{lojaNome}</h3>
+                                                    <p className="text-xs text-slate-500">{primeiro.cliente_nome}</p>
+                                                </div>
+                                                <Link
+                                                    href={`/treinamentos?clienteId=${encodeURIComponent(primeiro.cliente_id)}&lojaId=${encodeURIComponent(lojaId)}`}
+                                                    className="text-sm font-semibold text-[#c22a2e] hover:underline"
+                                                >
+                                                    Abrir treinamentos →
+                                                </Link>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {itensDaLoja.map((item) => (
+                                                    <div key={item.id} className="border-t border-slate-100 pt-3">
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-slate-800">{item.titulo}</p>
+                                                                <p className="mt-1 text-xs text-slate-500">
+                                                                    Realizado em {formatarData(item.data_realizacao)} · Validade de {item.validade_meses} meses · Participantes: {item.participantes || "Não informados"}
+                                                                </p>
+                                                            </div>
+                                                            <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${item.diasRestantes < 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"}`}>
+                                                                {item.diasRestantes < 0
+                                                                    ? `Vencido há ${Math.abs(item.diasRestantes)} dia(s)`
+                                                                    : item.diasRestantes === 0
+                                                                        ? "Vence hoje"
+                                                                        : `Vence em ${item.diasRestantes} dia(s)`}
+                                                                {" · "}{formatarData(item.vencimento)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
                     <section className="mb-8">
                         <SecaoTitulo
                             titulo="Fila de supervisão"
@@ -417,6 +559,7 @@ export default async function Home() {
                             />
                         </div>
                     </section>
+                    </>
                 ) : null}
 
                 {ehConsultor ? (

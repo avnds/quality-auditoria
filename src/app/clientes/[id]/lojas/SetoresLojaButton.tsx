@@ -19,7 +19,7 @@ export default function SetoresLojaButton({
             <button
                 type="button"
                 onClick={() => setAberto(true)}
-                className="text-sm font-semibold text-[#12223f] hover:underline"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#22365b]/20 bg-white px-3 py-2 text-xs font-semibold text-[#22365b] shadow-sm transition-colors hover:border-[#22365b] hover:bg-[#22365b]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22365b]/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 Setores
             </button>

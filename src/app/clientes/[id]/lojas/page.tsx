@@ -292,19 +292,19 @@ export default async function LojasPage({
                                     <table className="w-full table-fixed">
                                         <thead className="bg-gray-50">
                                             <tr className="text-left text-sm text-gray-600">
-                                                <th className="w-[25%] px-5 py-4 font-semibold">
+                                                <th className="w-[18%] px-5 py-4 font-semibold">
                                                     Loja
                                                 </th>
 
-                                                <th className="w-[18%] px-5 py-4 font-semibold">
+                                                <th className="w-[14%] px-5 py-4 font-semibold">
                                                     CNPJ
                                                 </th>
 
-                                                <th className="w-[18%] px-5 py-4 font-semibold">
+                                                <th className="w-[13%] px-5 py-4 font-semibold">
                                                     Cidade / UF
                                                 </th>
 
-                                                <th className="w-[20%] px-5 py-4 font-semibold">
+                                                <th className="w-[17%] px-5 py-4 font-semibold">
                                                     Telefone / WhatsApp
                                                 </th>
 
@@ -312,7 +312,7 @@ export default async function LojasPage({
                                                     Status
                                                 </th>
 
-                                                <th className="w-[20%] px-5 py-4 text-right font-semibold">
+                                                <th className="w-[26%] px-5 py-4 text-right font-semibold">
                                                     Ações
                                                 </th>
                                             </tr>
@@ -374,9 +374,23 @@ export default async function LojasPage({
                                                     </td>
 
                                                     <td className="px-5 py-4">
-                                                        <div className="flex flex-nowrap items-center justify-end gap-3 whitespace-nowrap">
+                                                        <div className="flex flex-wrap items-center justify-end gap-2">
                                                             {podeGerenciar && (
-                                                                <EditarLojaButton lojaId={loja.id} />
+                                                                <>
+                                                                    <Link
+                                                                        href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
+                                                                        className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#22365b]/20 bg-white px-3 py-2 text-xs font-semibold text-[#22365b] shadow-sm transition-colors hover:border-[#22365b] hover:bg-[#22365b]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22365b]/30 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    >
+                                                                        Colaboradores
+                                                                    </Link>
+                                                                    <Link
+                                                                        href={`/treinamentos?clienteId=${encodeURIComponent(cliente.id)}&lojaId=${encodeURIComponent(loja.id)}`}
+                                                                        className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#22365b]/20 bg-white px-3 py-2 text-xs font-semibold text-[#22365b] shadow-sm transition-colors hover:border-[#22365b] hover:bg-[#22365b]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22365b]/30"
+                                                                    >
+                                                                        Treinamentos
+                                                                    </Link>
+                                                                    <EditarLojaButton lojaId={loja.id} />
+                                                                </>
                                                             )}
 
                                                             <TelefonesLojaButton
@@ -463,7 +477,20 @@ export default async function LojasPage({
 
                                             {podeGerenciar && (
                                                 <div className="mt-4 border-t border-gray-100 pt-4 flex flex-wrap items-center gap-2">
-                                                    <EditarLojaButton lojaId={loja.id} />
+                                                    <Link
+                                                                href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
+                                                                className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
+                                                            >
+                                                                Colaboradores
+                                                            </Link>
+                                                            <Link
+                                                                href={`/treinamentos?clienteId=${encodeURIComponent(cliente.id)}&lojaId=${encodeURIComponent(loja.id)}`}
+                                                                className="rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
+                                                            >
+                                                                Treinamentos
+                                                            </Link>
+
+                                                            <EditarLojaButton lojaId={loja.id} />
 
                                                     <TelefonesLojaButton
                                                         lojaId={loja.id}

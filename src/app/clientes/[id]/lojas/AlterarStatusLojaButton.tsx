@@ -69,8 +69,8 @@ export default function AlterarStatusLojaButton({
             disabled={alterando}
             className={
                 ativo
-                    ? "text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
-                    : "text-sm font-semibold text-green-600 hover:underline disabled:opacity-50"
+                    ? "inline-flex items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 py-2 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 focus-visible:ring-red-300"
+                    : "inline-flex items-center justify-center whitespace-nowrap rounded-lg border bg-white px-3 py-2 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50 focus-visible:ring-green-300"
             }
         >
             {alterando
