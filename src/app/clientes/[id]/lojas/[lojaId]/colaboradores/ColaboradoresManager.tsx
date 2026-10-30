@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Colaborador = {
     id: string;
@@ -27,8 +27,7 @@ export default function ColaboradoresManager({ lojaId, lojaNome }: Props) {
     const [email, setEmail] = useState("");
     const [telefone, setTelefone] = useState("");
 
-    async function carregar() {
-        setCarregando(true);
+    const carregar = useCallback(async () => {
         try {
             const response = await fetch(`/api/lojas/${lojaId}/colaboradores`);
             const data = await response.json();
@@ -39,11 +38,11 @@ export default function ColaboradoresManager({ lojaId, lojaNome }: Props) {
         } finally {
             setCarregando(false);
         }
-    }
+    }, [lojaId]);
 
     useEffect(() => {
         void carregar();
-    }, [lojaId]);
+    }, [carregar]);
 
     function limparFormulario() {
         setEditando(null);
