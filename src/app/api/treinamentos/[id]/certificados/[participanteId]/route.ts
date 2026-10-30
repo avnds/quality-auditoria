@@ -109,6 +109,8 @@ export async function POST(
                     t.ministrante,
                     l.id AS loja_id,
                     l.nome AS loja_nome,
+                    l.cidade AS loja_cidade,
+                    l.estado AS loja_estado,
                     c.nome_fantasia AS cliente_nome
                 FROM treinamento_colaboradores tc
                 INNER JOIN treinamentos t ON t.id = tc.treinamento_id
@@ -157,6 +159,9 @@ export async function POST(
         const titulo = textoPdf(participante.titulo);
         const loja = textoPdf(participante.loja_nome);
         const cliente = textoPdf(participante.cliente_nome);
+        const cidade = participante.loja_cidade == null ? "" : textoPdf(participante.loja_cidade).trim();
+        const estado = participante.loja_estado == null ? "" : textoPdf(participante.loja_estado).trim();
+        const localTreinamento = [cidade, estado].filter(Boolean).join(" - ") || "Nao informado";
         const ministrante = textoPdf(participante.ministrante);
         const dataOriginal = String(participante.data_realizacao ?? "");
         const dataMatch = dataOriginal.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -226,6 +231,8 @@ export async function POST(
             textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
         }
 
+        centralizar("Quality Consultorias em Alimentos", 397, 9, negrito, azul, 128, 155);
+
         // Medalha PNG transparente enviada para public/Medalha.png.
         try {
             const medalhaBytes = await readFile(path.join(process.cwd(), "public", "Medalha.png"));
@@ -246,16 +253,17 @@ export async function POST(
         centralizar("CERTIFICAMOS QUE", 360, 12, negrito, azul, 430, 500);
         centralizar(nome, 319, 27, negrito, azul, 430, 650);
         if (cargo) centralizar(cargo, 300, 9, fonte, cinza, 430, 560);
-        centralizar("PARTICIPOU DO TREINAMENTO", 272, 11, negrito, azul, 430, 540);
+        centralizar("PARTICIPOU DE", 272, 11, negrito, azul, 430, 540);
         centralizar(titulo, 242, 19, negrito, azul, 430, 690);
-        centralizar(`REALIZADO EM ${data}`, 219, 10, fonte, cinza, 430, 500);
+        centralizar(`REALIZADO EM ${data}  |  LOCAL: ${localTreinamento}`, 219, 10, fonte, cinza, 430, 650);
+        centralizar(`MINISTRANTE: ${ministrante}`, 205, 9, fonte, cinza, 430, 650);
 
         // Quatro campos informativos com divisórias verticais regulares.
         pagina.drawLine({ start: { x: 72, y: 197 }, end: { x: 770, y: 197 }, thickness: 1, color: azul });
         const dados = [
             { x: 82, w: 164, label: "EMPRESA / LOJA", value: `${cliente} - ${loja}` },
             { x: 270, w: 125, label: "CARGA HORÁRIA", value: `${Math.floor(carga / 60)}h ${carga % 60}min` },
-            { x: 425, w: 140, label: "MINISTRANTE", value: ministrante },
+            { x: 425, w: 140, label: "CONTEUDO", value: textoPdf(conteudo) || "Nao informado" },
             { x: 595, w: 160, label: "Nº DO CERTIFICADO", value: numero },
         ];
         for (let i = 0; i < dados.length; i++) {
@@ -266,10 +274,6 @@ export async function POST(
             linhas.forEach((linha, indice) => textoLimitado(linha, item.x, 151 - indice * 13, item.w, 9, fonte, cinza));
         }
 
-        if (conteudo.trim()) {
-            const linhasConteudo = quebrarTexto(`CONTEÚDO: ${textoPdf(conteudo)}`, 105).slice(0, 2);
-            linhasConteudo.forEach((linha, indice) => centralizar(linha, 91 - indice * 11, 7.5, fonte, cinza, 430, 680));
-        }
 
         // Assinatura institucional e identificação profissional da supervisora.
         // A imagem fica acima da identificação, sem invadir os campos informativos.
