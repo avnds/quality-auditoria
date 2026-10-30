@@ -80,15 +80,18 @@ export default async function CertificadosPage() {
                             <h2 className="text-lg font-semibold text-[#12223f]">Certificados emitidos</h2>
                             <p className="mt-1 text-sm text-slate-500">{certificados.length} registro(s)</p>
                         </div>
-                        <Link href="/treinamentos" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                            Ir para treinamentos
+                        <Link
+                            href="/treinamentos"
+                            className="inline-flex items-center justify-center rounded-lg bg-[#22365b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#182947]"
+                        >
+                            Gerar certificados
                         </Link>
                     </div>
 
                     {certificados.length === 0 ? (
                         <div className="px-6 py-12 text-center">
                             <p className="font-medium text-slate-700">Nenhum certificado emitido ainda.</p>
-                            <p className="mt-2 text-sm text-slate-500">A emissão é feita individualmente no histórico de cada treinamento.</p>
+                            <p className="mt-2 text-sm text-slate-500">Clique em Gerar certificados para selecionar uma loja, acessar o histórico de treinamentos e emitir os PDFs dos participantes.</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-100">
