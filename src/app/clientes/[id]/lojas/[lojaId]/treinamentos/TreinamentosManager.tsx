@@ -302,22 +302,4 @@ export default function TreinamentosManager({ lojaId }: Props) {
         </div>
     );
 }
-                                        </p>
-                                    </div>
-                                    <span className="w-fit rounded-full bg-[#22365b]/10 px-3 py-1 text-xs font-semibold text-[#22365b]">
-                                        {Number(treinamento.total_participantes)} participante(s)
-                                    </span>
-                                </div>
-                                {treinamento.conteudo_programatico && (
-                                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{treinamento.conteudo_programatico}</p>
-                                )}
-                                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes</p>
-                                <p className="mt-1 text-sm text-slate-700">{treinamento.participantes || "Nenhum participante informado"}</p>
-                            </article>
-                        ))}
-                    </div>
-                )}
-            </section>
-        </div>
-    );
-}
+
