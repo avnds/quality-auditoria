@@ -161,7 +161,7 @@ export async function POST(
         const dataOriginal = String(participante.data_realizacao ?? "");
         const dataMatch = dataOriginal.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
         const data = dataMatch
-            ? `${dataMatch[3]}/${dataMatch[2]}/${dataMatch[1]}`
+            ? `${dataMatch[3]}-${dataMatch[2]}-${dataMatch[1]}`
             : textoPdf(dataOriginal);
         const carga = Number(participante.carga_horaria_minutos);
         const conteudo = participante.conteudo_programatico == null
