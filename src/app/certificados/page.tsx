@@ -115,7 +115,7 @@ export default async function CertificadosPage() {
                                             Baixar PDF
                                         </a>
                                     ) : (
-                                        <span className="text-xs text-amber-700">Arquivo não disponível</span>
+                                        <span className="max-w-xs text-xs text-slate-500">PDF não armazenado. Para baixar, gere novamente pelo histórico do treinamento.</span>
                                     )}
                                 </article>
                             ))}
