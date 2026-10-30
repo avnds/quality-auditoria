@@ -179,16 +179,30 @@ export default function TreinamentosManager({ lojaId }: Props) {
                 `/api/treinamentos/${treinamentoId}/certificados/${participanteId}`,
                 { method: "POST" }
             );
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || "Não foi possível emitir o certificado.");
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                throw new Error(data?.message || "Não foi possível emitir o certificado.");
             }
+
+            const arquivo = await response.blob();
+            if (arquivo.type !== "application/pdf" || arquivo.size === 0) {
+                throw new Error("A emissão não retornou um PDF válido.");
+            }
+
+            const url = URL.createObjectURL(arquivo);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `certificado-${response.headers.get("X-Certificado-Numero") || participanteId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+
+            const numero = response.headers.get("X-Certificado-Numero") || "";
+            const nome = decodeURIComponent(response.headers.get("X-Certificado-Nome") || "");
+            const regenerado = response.headers.get("X-Certificado-Regenerado") === "true";
             setMensagem(
-                (data.certificado.regenerado ? "Certificado " : "Certificado ") +
-                data.certificado.numero +
-                (data.certificado.regenerado ? " regenerado para " : " emitido para ") +
-                data.certificado.nomeColaborador +
-                "."
+                `Certificado ${numero} ${regenerado ? "regenerado" : "emitido"}${nome ? ` para ${nome}` : ""}. O download foi iniciado.`
             );
             await carregar();
         } catch (error) {
