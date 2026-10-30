@@ -292,19 +292,19 @@ export default async function LojasPage({
                                     <table className="w-full table-fixed">
                                         <thead className="bg-gray-50">
                                             <tr className="text-left text-sm text-gray-600">
-                                                <th className="w-[25%] px-5 py-4 font-semibold">
+                                                <th className="w-[18%] px-5 py-4 font-semibold">
                                                     Loja
                                                 </th>
 
-                                                <th className="w-[18%] px-5 py-4 font-semibold">
+                                                <th className="w-[14%] px-5 py-4 font-semibold">
                                                     CNPJ
                                                 </th>
 
-                                                <th className="w-[18%] px-5 py-4 font-semibold">
+                                                <th className="w-[13%] px-5 py-4 font-semibold">
                                                     Cidade / UF
                                                 </th>
 
-                                                <th className="w-[20%] px-5 py-4 font-semibold">
+                                                <th className="w-[17%] px-5 py-4 font-semibold">
                                                     Telefone / WhatsApp
                                                 </th>
 
@@ -312,7 +312,7 @@ export default async function LojasPage({
                                                     Status
                                                 </th>
 
-                                                <th className="w-[20%] px-5 py-4 text-right font-semibold">
+                                                <th className="w-[26%] px-5 py-4 text-right font-semibold">
                                                     Ações
                                                 </th>
                                             </tr>
@@ -374,7 +374,7 @@ export default async function LojasPage({
                                                     </td>
 
                                                     <td className="px-5 py-4">
-                                                        <div className="flex flex-nowrap items-center justify-end gap-3 whitespace-nowrap">
+                                                        <div className="flex flex-wrap items-center justify-end gap-2">
                                                             {podeGerenciar && (
                                                                 <>
                                                                     <Link
