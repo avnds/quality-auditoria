@@ -279,7 +279,7 @@ export async function POST(
         centralizar(ministrante, 59, 9, negrito, azul, 267, 235);
         centralizar("RESPONSÁVEL PELO TREINAMENTO", 45, 7.5, fonte, cinza, 267, 235);
         centralizar(nome, 59, 9, negrito, azul, 574, 235);
-        centralizar("PARTICIPANTE", 45, 7.5, fonte, cinza, 574, 235);
+        centralizar("PARTICIPANTE", 45, 7.5, negrito, branco, 574, 235);
 
         const bytes = Buffer.from(await pdf.save());
         const caminho = `certificados/${lojaId}/${certificadoId}.pdf`;
