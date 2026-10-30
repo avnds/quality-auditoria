@@ -401,9 +401,11 @@ export default function TreinamentosManager({ lojaId }: Props) {
                     <p className="p-6 text-sm text-slate-500">Carregando histórico...</p>
                 ) : treinamentos.length === 0 ? (
                     <p className="p-8 text-center text-sm text-slate-500">Nenhum treinamento registrado para esta loja.</p>
+                ) : treinamentosFiltrados.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-slate-500">Nenhum treinamento encontrado para o período selecionado.</p>
                 ) : (
                     <div className="divide-y divide-slate-100">
-                        {treinamentos.map((treinamento) => (
+                        {treinamentosFiltrados.map((treinamento) => (
                             <article key={treinamento.id} className="px-6 py-5">
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
