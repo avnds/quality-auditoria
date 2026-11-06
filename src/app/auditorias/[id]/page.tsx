@@ -561,7 +561,7 @@ export default function ExecucaoAuditoriaPage() {
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-        if (usarCamera) {
+        if (origem === "camera") {
             input.setAttribute("capture", "environment");
         }
 
