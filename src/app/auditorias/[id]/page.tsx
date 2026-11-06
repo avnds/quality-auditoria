@@ -138,6 +138,27 @@ export default function ExecucaoAuditoriaPage() {
     const [evidenciaAberta, setEvidenciaAberta] =
         useState<Evidencia | null>(null);
 
+    const [escolhaEvidencia, setEscolhaEvidencia] = useState<
+        | { tipo: "adicionar"; itemId: string }
+        | { tipo: "substituir"; itemId: string; evidencia: Evidencia }
+        | null
+    >(null);
+
+    function dispositivoMovel() {
+        return window.matchMedia("(max-width: 767px) and (pointer: coarse)").matches;
+    }
+
+    function escolherOrigemEvidencia(origem: "camera" | "arquivo") {
+        if (!escolhaEvidencia) return;
+        const escolha = escolhaEvidencia;
+        setEscolhaEvidencia(null);
+        if (escolha.tipo === "adicionar") {
+            void adicionarEvidencia(escolha.itemId, origem);
+        } else {
+            void substituirEvidencia(escolha.evidencia, escolha.itemId, origem);
+        }
+    }
+
     const timersObservacao = useRef<
         Record<string, ReturnType<typeof setTimeout>>
     >({});
@@ -369,7 +390,8 @@ export default function ExecucaoAuditoriaPage() {
 
 
     async function adicionarEvidencia(
-        itemId: string
+        itemId: string,
+        origem?: "camera" | "arquivo"
     ) {
         const respostaId = respostaIds[itemId];
 
@@ -390,15 +412,16 @@ export default function ExecucaoAuditoriaPage() {
         ) {
             return;
         }
-        const usarCamera = window.confirm(
-            "Como deseja adicionar a evidência?\n\nOK: Tirar foto com a câmera\nCancelar: Escolher da galeria/arquivos"
-        );
+        if (!origem && dispositivoMovel()) {
+            setEscolhaEvidencia({ tipo: "adicionar", itemId });
+            return;
+        }
         const input = document.createElement("input");
 
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-        if (usarCamera) {
+        if (origem === "camera") {
             input.setAttribute("capture", "environment");
         }
         input.onchange = async () => {
@@ -525,18 +548,20 @@ export default function ExecucaoAuditoriaPage() {
 
     const substituirEvidencia = async (
         evidencia: Evidencia,
-        itemId: string
+        itemId: string,
+        origem?: "camera" | "arquivo"
     ) => {
-        const usarCamera = window.confirm(
-            "Como deseja substituir a foto?\n\nOK: Tirar uma nova foto\nCancelar: Escolher da galeria/arquivos"
-        );
+        if (!origem && dispositivoMovel()) {
+            setEscolhaEvidencia({ tipo: "substituir", itemId, evidencia });
+            return;
+        }
         const input =
             document.createElement("input");
 
         input.type = "file";
         input.accept =
             "image/jpeg,image/png,image/webp";
-        if (usarCamera) {
+        if (origem === "camera") {
             input.setAttribute("capture", "environment");
         }
 
@@ -1927,6 +1952,37 @@ export default function ExecucaoAuditoriaPage() {
                         </button>
                     </div>
                 )}
+
+            {escolhaEvidencia && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-3 sm:items-center"
+                    onClick={() => setEscolhaEvidencia(null)}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="titulo-origem-evidencia"
+                        className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="titulo-origem-evidencia" className="text-lg font-bold text-[#22365b]">
+                            {escolhaEvidencia.tipo === "adicionar" ? "Adicionar evidência" : "Substituir evidência"}
+                        </h2>
+                        <p className="mt-1 text-sm text-slate-600">Como deseja selecionar a foto?</p>
+                        <div className="mt-5 flex flex-col gap-3">
+                            <button type="button" onClick={() => escolherOrigemEvidencia("camera")} className="min-h-[48px] rounded-xl bg-[#22365b] px-4 py-3 text-sm font-semibold text-white hover:bg-[#182947]">
+                                Tirar foto com a câmera
+                            </button>
+                            <button type="button" onClick={() => escolherOrigemEvidencia("arquivo")} className="min-h-[48px] rounded-xl border border-[#22365b] px-4 py-3 text-sm font-semibold text-[#22365b] hover:bg-slate-50">
+                                Escolher da galeria ou arquivos
+                            </button>
+                            <button type="button" onClick={() => setEscolhaEvidencia(null)} className="min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {evidenciaAberta && (
                 <div
