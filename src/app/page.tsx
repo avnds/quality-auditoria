@@ -238,7 +238,7 @@ export default async function Home() {
         totalAbertas = totaisStatus.get("ABERTA") ?? 0;
     }
 
-    if (ehSupervisora && await temPermissao(usuario.id, "treinamentos.visualizar")) {
+    if ((ehSupervisora || ehConsultor) && await temPermissao(usuario.id, "treinamentos.visualizar")) {
         const treinamentosResult = await db.execute(`
             SELECT
                 t.id,
@@ -255,9 +255,18 @@ export default async function Home() {
             INNER JOIN clientes c ON c.id = l.cliente_id
             LEFT JOIN treinamento_colaboradores tc ON tc.treinamento_id = t.id
             WHERE t.validade_meses IS NOT NULL
+              AND l.ativo = 1
+              AND (? = 1 OR EXISTS (SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = l.id AND ul.usuario_id = ?))
+              AND NOT EXISTS (
+                SELECT 1 FROM treinamentos novo
+                WHERE novo.loja_id = t.loja_id
+                  AND LOWER(TRIM(novo.titulo)) = LOWER(TRIM(t.titulo))
+                  AND (novo.data_realizacao > t.data_realizacao
+                       OR (novo.data_realizacao = t.data_realizacao AND novo.id > t.id))
+              )
             GROUP BY t.id
             ORDER BY t.data_realizacao DESC
-        `);
+        `, [ehSupervisora ? 1 : 0, usuario.id]);
 
         const hoje = dataISOHoje();
         const hojeMs = Date.parse(`${hoje}T00:00:00Z`);
