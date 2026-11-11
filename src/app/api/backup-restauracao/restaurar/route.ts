@@ -228,8 +228,15 @@ export async function POST(request: Request) {
         }
 
         await transaction.commit();
-        cookieStore.delete("quality_restore_prepared");
-        return NextResponse.redirect(new URL("/backup-restauracao?restaurado=1", request.url), 303);
+        const response = NextResponse.redirect(new URL("/backup-restauracao?restaurado=1", request.url), 303);
+        response.cookies.set("quality_restore_prepared", "", {
+            httpOnly: true,
+            sameSite: "strict",
+            secure: new URL(request.url).protocol === "https:",
+            path: "/api/backup-restauracao/restaurar",
+            maxAge: 0,
+        });
+        return response;
     } catch (error) {
         if (transaction) {
             try { await transaction.rollback(); } catch (rollbackError) { console.error("Erro ao reverter restauração lógica:", rollbackError); }
