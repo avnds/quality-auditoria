@@ -12,6 +12,7 @@ type Status = {
     colaborador_nome: string | null; status: string; dias_restantes: number | null;
     data_prazo: string | null; verificacao_id: string | null;
 };
+type Colaborador = { colaborador_id: string; nome: string; cargo: string | null; colaborador_ativo: number; instancia_id: string | null; instancia_ativa: number | null };
 type Resumo = { total: number; verificados: number; exigem_atencao: number };
 const rotulos: Record<string, string> = {
     NAO_VERIFICADO: "Não verificado", NAO_APRESENTADO: "Não apresentado",
@@ -38,6 +39,9 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
     const [erro, setErro] = useState("");
     const [aberto, setAberto] = useState<string | null>(null);
     const [revisao, setRevisao] = useState(0);
+    const [colaboradores, setColaboradores] = useState<Record<string, Colaborador[]>>({});
+    const [buscas, setBuscas] = useState<Record<string, string>>({});
+    const [erroASO, setErroASO] = useState("");
 
     useEffect(() => {
         const controller = new AbortController();
@@ -65,6 +69,20 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
         void carregar();
         return () => controller.abort();
     }, [lojaId, revisao]);
+
+    async function abrirASO(docId: string) {
+        if (aberto === docId) { setAberto(null); return; }
+        setErroASO("");
+        setAberto(docId);
+        try {
+            const resposta = await fetch(`/api/documentos/lojas/${encodeURIComponent(lojaId)}/${encodeURIComponent(docId)}/instancias`);
+            const json = await resposta.json();
+            if (!resposta.ok || !json.success) throw new Error(json.message ?? "Não foi possível carregar os colaboradores.");
+            setColaboradores((atual) => ({ ...atual, [docId]: json.colaboradores }));
+        } catch (e) {
+            setErroASO(e instanceof Error ? e.message : "Erro ao consultar colaboradores.");
+        }
+    }
 
     if (carregando) return <div className="rounded-xl bg-white p-8 text-slate-600">Carregando documentos...</div>;
     if (erro) return <div role="alert" className="rounded-xl border border-red-200 bg-white p-6 text-red-700">{erro}</div>;
@@ -110,15 +128,39 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
                                 </div>
                             )}
                             {doc.modalidade === "COLABORADOR" && (
-                                <div className="mt-4 space-y-2 border-t pt-3">
-                                    {registros.length === 0
-                                        ? <p className="text-sm text-slate-500">Nenhum ASO individual ativo cadastrado.</p>
-                                        : registros.map((item) => (
-                                            <div key={item.instancia_id ?? "loja"} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                                                <span className="text-slate-700">{item.colaborador_nome ?? "Colaborador"}</span>
-                                                <StatusEtiqueta status={item.status} />
-                                            </div>
-                                        ))}
+                                <div className="mt-4 border-t pt-4">
+                                    <button type="button" onClick={() => void abrirASO(doc.id)}
+                                        className="rounded-lg border border-[#22365b] px-4 py-2 text-sm font-semibold text-[#22365b]">
+                                        {aberto === doc.id ? "Ocultar colaboradores" : "Ver ASOs por colaborador"}
+                                    </button>
+                                    {aberto === doc.id && (
+                                        <div className="mt-4 space-y-3">
+                                            {erroASO && <p role="alert" className="text-sm text-red-700">{erroASO}</p>}
+                                            <input type="search" placeholder="Buscar colaborador..."
+                                                value={buscas[doc.id] ?? ""}
+                                                onChange={(e) => setBuscas((atual) => ({ ...atual, [doc.id]: e.target.value }))}
+                                                className="w-full rounded-lg border p-2 text-sm" />
+                                            {(colaboradores[doc.id] ?? []).filter((c) => Number(c.colaborador_ativo) === 1
+                                                && c.nome.toLocaleLowerCase("pt-BR").includes((buscas[doc.id] ?? "").toLocaleLowerCase("pt-BR")))
+                                                .map((c) => {
+                                                    const item = registros.find((r) => r.instancia_id === c.instancia_id);
+                                                    return <div key={c.colaborador_id} className="rounded-lg border border-slate-200 p-4">
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <div><p className="font-semibold text-slate-800">{c.nome}</p>
+                                                                <p className="text-xs text-slate-500">{c.cargo ?? "Cargo não informado"}</p></div>
+                                                            <StatusEtiqueta status={item?.status ?? "NAO_VERIFICADO"} />
+                                                        </div>
+                                                        {!c.instancia_id && <p className="mt-2 text-sm text-amber-800">ASO ainda não cadastrado para este colaborador.</p>}
+                                                        {c.instancia_id && Number(c.instancia_ativa) === 1 && Number(doc.ativo) === 1 && (
+                                                            <FormularioVerificacao key={c.instancia_id} lojaId={lojaId}
+                                                                vinculoId={doc.id} instanciaId={c.instancia_id}
+                                                                aoConfirmar={() => { setRevisao((valor) => valor + 1); void abrirASO(doc.id); }} />
+                                                        )}
+                                                        {c.instancia_id && Number(c.instancia_ativa) !== 1 && <p className="mt-2 text-sm text-red-700">ASO individual inativo.</p>}
+                                                    </div>;
+                                                })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </section>;
