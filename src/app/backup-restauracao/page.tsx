@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 
 type PageProps = {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -21,6 +22,15 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
             </main>
         );
     }
+
+    let ambienteBanco: "development" | "production" | "unknown" = "unknown";
+    try {
+        ambienteBanco = identificarAmbienteBanco();
+    } catch {
+        // Não oferecer restauração quando a conexão não é reconhecida.
+    }
+    const producao = ambienteBanco === "production";
+    const confirmacao = producao ? "RESTAURAR PRODUCAO" : "RESTAURAR DEV";
 
     return (
         <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -49,8 +59,8 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                 </section>
 
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
-                    <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco DEV</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ao ambiente local. Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
+                    <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco {producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ({producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}). Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
                     <form action="/api/backup-restauracao/restaurar" method="post" encType="multipart/form-data" className="mt-5 space-y-4">
                         <div>
                             <label htmlFor="arquivo" className="mb-2 block text-sm font-semibold text-slate-800">Arquivo JSON do backup</label>
@@ -58,14 +68,20 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                             <p className="mt-1 text-xs text-slate-500">Limite: 25 MB. O arquivo deve ter sido gerado pelo backup lógico do Quality Auditoria; backups de DEV e produção são aceitos.</p>
                         </div>
                         <div>
-                            <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: RESTAURAR DEV</label>
-                            <input id="confirmacao" name="confirmacao" type="text" autoComplete="off" required pattern="RESTAURAR DEV" title="Digite exatamente RESTAURAR DEV" className="block w-full rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-900" />
+                            <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: {confirmacao}</label>
+                            <input id="confirmacao" name="confirmacao" type="text" autoComplete="off" required pattern={confirmacao} title={`Digite exatamente ${confirmacao}`} className="block w-full rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-900" />
                         </div>
-                        <button type="submit" className="inline-flex items-center justify-center rounded-xl bg-[#c22a2e] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
-                            Substituir dados do banco DEV
+                        {producao && (
+                            <label className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+                                <input type="checkbox" name="backup_recuperacao" value="confirmado" required className="mt-1" />
+                                Confirmo que gerei e guardei fora do sistema um backup de recuperação atualizado do banco de PRODUÇÃO e compreendo que os dados atuais serão substituídos.
+                            </label>
+                        )}
+                        <button type="submit" disabled={ambienteBanco === "unknown"} className="inline-flex items-center justify-center rounded-xl bg-[#c22a2e] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
+                            Substituir dados do banco {producao ? "PRODUÇÃO" : "DEV"}
                         </button>
                     </form>
-                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">O download do backup é permitido para MASTER autenticado também em produção. A restauração continua restrita ao ambiente local de desenvolvimento. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada.</p>
+                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">A restauração é exclusiva do MASTER e substitui todos os dados do banco conectado. Confirme o destino antes de enviar. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada.</p>
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -74,7 +90,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                         <li>Restaura tabelas, índices e registros incluídos no arquivo.</li>
                         <li>Confere as quantidades de linhas e executa uma verificação de chaves estrangeiras antes de confirmar a transação.</li>
                         <li>Não restaura fotos e arquivos do Vercel Blob.</li>
-                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente DEV.</li>
+                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado.</li>
                     </ul>
                 </section>
             </div>
