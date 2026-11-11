@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { permissoesDoPerfil } from "@/lib/auth/permissoes-padrao";
 import { requirePermission } from "@/lib/auth/require-permission";
 import {
     forbiddenResponse,
@@ -271,14 +272,38 @@ export async function PATCH(
 
         valores.push(id);
 
-        await db.execute({
+        const atualizarUsuario = {
             sql: `
                 UPDATE usuarios
                 SET ${campos.join(", ")}
                 WHERE id = ?
             `,
             args: valores,
-        });
+        };
+
+        if (perfil !== undefined && perfil !== String(usuarioAlvo.perfil)) {
+            // Mudanca de perfil revoga permissoes anteriores para impedir
+            // que privilegios administrativos sobrevivam ao rebaixamento.
+            const permissoes = permissoesDoPerfil(perfil as "CONSULTOR" | "SUPERVISORA");
+
+            await db.batch([
+                atualizarUsuario,
+                {
+                    sql: "DELETE FROM usuario_permissao WHERE usuario_id = ?",
+                    args: [id],
+                },
+                {
+                    sql: `
+                        INSERT INTO usuario_permissao (usuario_id, permissao_id)
+                        SELECT ?, id FROM permissoes
+                        WHERE id IN (${permissoes.map(() => "?").join(",")})
+                    `,
+                    args: [id, ...permissoes],
+                },
+            ], "write");
+        } else {
+            await db.execute(atualizarUsuario);
+        }
 
         const usuarioAtualizadoResult = await db.execute({
             sql: `
