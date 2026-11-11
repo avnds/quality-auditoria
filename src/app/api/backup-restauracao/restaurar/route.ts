@@ -105,7 +105,6 @@ export async function POST(request: Request) {
     if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar bancos de dados.", 403);
 
     let transaction: Awaited<ReturnType<typeof db.transaction>> | undefined;
-    let foreignKeysDisabled = false;
 
     try {
         const form = await request.formData();
@@ -124,22 +123,46 @@ export async function POST(request: Request) {
         try { parsed = JSON.parse(await file.text()); } catch { return fail("O arquivo não contém JSON válido."); }
         const backup = validateBackup(parsed);
 
-        await db.execute("PRAGMA foreign_keys = OFF");
-        foreignKeysDisabled = true;
+        // Mantém as chaves estrangeiras ativas: PRAGMA em db.execute() pode
+        // usar outra conexão, diferente da transação remota do Turso.
         transaction = await db.transaction("write");
         await transaction.execute("PRAGMA defer_foreign_keys = ON");
 
-        const currentIndexes = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'index' AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%'");
-        for (const row of currentIndexes.rows) {
-            const name = String(row.name);
-            await transaction.execute('DROP INDEX IF EXISTS "' + name.replace(/"/g, '""') + '"');
+        const currentTables = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+        const names = currentTables.rows.map((row) => String(row.name));
+        for (const name of names) {
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+                throw new Error("O banco atual contém um nome de objeto inesperado; restauração cancelada.");
+            }
         }
 
-        const currentTables = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
-        for (const row of currentTables.rows) {
-            const name = String(row.name);
-            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("O banco atual contém um nome de objeto inesperado; restauração cancelada.");
-            await transaction.execute('DROP TABLE IF EXISTS "' + name.replace(/"/g, '""') + '"');
+        // Exclui tabelas filhas antes das tabelas referenciadas. Nunca
+        // depende da ordem arbitrária retornada por sqlite_schema.
+        const existing = new Set(names);
+        const dependencies = new Map<string, Set<string>>();
+        for (const name of names) {
+            const foreignKeys = await transaction.execute('PRAGMA foreign_key_list("' + name + '")');
+            const parents = new Set<string>();
+            for (const key of foreignKeys.rows) {
+                const parent = String(key.table);
+                if (parent !== name && existing.has(parent)) parents.add(parent);
+            }
+            dependencies.set(name, parents);
+        }
+        const dropOrder: string[] = [];
+        const pending = new Set(names);
+        while (pending.size > 0) {
+            const next = [...pending].find((name) =>
+                ![...pending].some((other) => other !== name && dependencies.get(other)?.has(name))
+            );
+            if (!next) {
+                throw new Error("Dependências circulares entre tabelas: restauração cancelada por segurança.");
+            }
+            dropOrder.push(next);
+            pending.delete(next);
+        }
+        for (const name of dropOrder) {
+            await transaction.execute('DROP TABLE IF EXISTS "' + name + '"');
         }
 
         for (const table of backup.tables) await transaction.execute(table.createSql);
@@ -176,9 +199,6 @@ export async function POST(request: Request) {
     } finally {
         if (transaction) {
             try { await transaction.close(); } catch (error) { console.error("Erro ao fechar transação de restauração:", error); }
-        }
-        if (foreignKeysDisabled) {
-            try { await db.execute("PRAGMA foreign_keys = ON"); } catch (error) { console.error("Erro ao reativar foreign_keys:", error); }
         }
     }
 }
