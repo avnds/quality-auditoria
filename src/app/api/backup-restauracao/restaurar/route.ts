@@ -94,25 +94,28 @@ function validateBackup(value: unknown): BackupFile {
 
 export async function POST(request: Request) {
     // A restrição deve considerar o banco real, não o ambiente da aplicação.
-    // A produção permanece bloqueada até a etapa de confirmação reforçada.
     let ambienteBanco: "development" | "production";
     try {
         ambienteBanco = identificarAmbienteBanco();
     } catch {
         return fail("Não foi possível identificar o banco conectado. Restauração bloqueada.", 403);
     }
-    if (ambienteBanco === "production") return fail("A restauração no banco de produção ainda não está habilitada.", 403);
-
     const usuario = await getCurrentUser();
     if (!usuario) return fail("Usuário não autenticado.", 401);
-    if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar o banco DEV.", 403);
+    if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar bancos de dados.", 403);
 
     let transaction: Awaited<ReturnType<typeof db.transaction>> | undefined;
     let foreignKeysDisabled = false;
 
     try {
         const form = await request.formData();
-        if (form.get("confirmacao") !== "RESTAURAR DEV") return fail('Digite exatamente "RESTAURAR DEV" para confirmar.');
+        const confirmacaoEsperada = ambienteBanco === "production" ? "RESTAURAR PRODUCAO" : "RESTAURAR DEV";
+        if (form.get("confirmacao") !== confirmacaoEsperada) {
+            return fail(`Digite exatamente "${confirmacaoEsperada}" para confirmar.`);
+        }
+        if (ambienteBanco === "production" && form.get("backup_recuperacao") !== "confirmado") {
+            return fail("Confirme que existe um backup de recuperação da produção salvo fora do sistema.");
+        }
         const file = form.get("arquivo");
         if (!(file instanceof File) || file.size === 0) return fail("Selecione um arquivo JSON de backup.");
         if (file.size > 25 * 1024 * 1024) return fail("O arquivo excede o limite de 25 MB.");
@@ -167,7 +170,7 @@ export async function POST(request: Request) {
         if (transaction) {
             try { await transaction.rollback(); } catch (rollbackError) { console.error("Erro ao reverter restauração lógica:", rollbackError); }
         }
-        console.error("Erro na restauração lógica DEV:", error);
+        console.error("Erro na restauração lógica:", error);
         const message = error instanceof Error ? error.message : "Erro inesperado na restauração.";
         return fail(message, 400);
     } finally {
