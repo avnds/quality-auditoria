@@ -27,7 +27,7 @@ export async function GET() {
                     JOIN documentos_catalogo dc ON dc.id = dl.documento_id
                     WHERE l.ativo = 1 AND dl.ativo = 1 AND dc.ativo = 1
                       AND dc.modalidade = 'LOJA'
-                      AND (? = 'MASTER' OR EXISTS (
+                      AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                           SELECT 1 FROM usuario_lojas ul
                           WHERE ul.loja_id = l.id AND ul.usuario_id = ?
                       ))
@@ -42,7 +42,7 @@ export async function GET() {
                     JOIN colaboradores c ON c.id = di.colaborador_id AND c.loja_id = l.id
                     WHERE l.ativo = 1 AND dl.ativo = 1 AND dc.ativo = 1
                       AND di.ativo = 1 AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
-                      AND (? = 'MASTER' OR EXISTS (
+                      AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                           SELECT 1 FROM usuario_lojas ul
                           WHERE ul.loja_id = l.id AND ul.usuario_id = ?
                       ))
