@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { InValue } from "@libsql/client";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import db from "@/lib/db";
+import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,7 +93,15 @@ function validateBackup(value: unknown): BackupFile {
 }
 
 export async function POST(request: Request) {
-    if (process.env.NODE_ENV === "production") return fail("A restauração está bloqueada neste ambiente.", 403);
+    // A restrição deve considerar o banco real, não o ambiente da aplicação.
+    // A produção permanece bloqueada até a etapa de confirmação reforçada.
+    let ambienteBanco: "development" | "production";
+    try {
+        ambienteBanco = identificarAmbienteBanco();
+    } catch {
+        return fail("Não foi possível identificar o banco conectado. Restauração bloqueada.", 403);
+    }
+    if (ambienteBanco === "production") return fail("A restauração no banco de produção ainda não está habilitada.", 403);
 
     const usuario = await getCurrentUser();
     if (!usuario) return fail("Usuário não autenticado.", 401);
