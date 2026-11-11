@@ -183,7 +183,7 @@ export default function FormularioVerificacao({
             <button type="button" onClick={() => { setPrecisaRevisar(false); void carregar(); }} className="ml-2 font-bold underline">Recarregar</button>
         </div>}
         {!editavel && <p className="text-sm text-red-700">Documento inativo. Edição bloqueada.</p>}
-        <fieldset onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) salvarAoSair(); }} disabled={!editavel || precisaRevisar} className="grid gap-3 sm:grid-cols-2">
+        <fieldset onBlur={() => salvarAoSair()} disabled={!editavel || precisaRevisar} className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium text-slate-700">Resultado
                 <select value={dados.resultado} onChange={(e) => atualizar({ resultado: e.target.value as Dados["resultado"], data_prazo: e.target.value === "NAO_APRESENTADO" ? "" : dados.data_prazo })} className="mt-1 w-full rounded-lg border p-2">
                     <option value="">Selecione</option><option value="APRESENTADO">Apresentado</option><option value="NAO_APRESENTADO">Não apresentado</option>
