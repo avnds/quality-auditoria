@@ -53,11 +53,13 @@ export async function GET(_request: Request, context: Contexto) {
                              dc.tipo_controle, COALESCE(dl.alerta_dias, dc.alerta_dias)
                       FROM documentos_lojas dl
                       JOIN documentos_catalogo dc ON dc.id = dl.documento_id
-                      JOIN documentos_instancias di ON di.documento_loja_id = dl.id
-                      JOIN colaboradores c ON c.id = di.colaborador_id
+                      JOIN colaboradores c ON c.loja_id = dl.loja_id
+                      LEFT JOIN documentos_instancias di
+                        ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id
                       WHERE dl.loja_id = ? AND c.loja_id = dl.loja_id
                         AND dl.ativo = 1 AND dc.ativo = 1
-                        AND di.ativo = 1 AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
+                        AND (di.id IS NULL OR di.ativo = 1)
+                        AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
                   ),
                   versoes AS (
                       SELECT v.*, ROW_NUMBER() OVER (
