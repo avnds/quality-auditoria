@@ -140,9 +140,14 @@ export async function POST(request: Request, context: Contexto) {
         }
         const ciclo = Number(vinculo.ciclo_atual);
         const ultimaResult = await db.execute({
-            sql: `SELECT id FROM documentos_verificacoes
-                  WHERE documento_loja_id = ? AND instancia_id IS NULL AND ciclo_documento = ?
-                  ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1`,
+            sql: `SELECT v.id FROM documentos_verificacoes v
+                  JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                  WHERE v.documento_loja_id = ? AND v.instancia_id IS NULL AND v.ciclo_documento = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM documentos_verificacoes nova
+                        WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                    )
+                  ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1`,
             args: [vinculoId, ciclo],
         });
         const ultimaId = ultimaResult.rows.length ? String(ultimaResult.rows[0].id) : null;
@@ -173,10 +178,15 @@ export async function POST(request: Request, context: Contexto) {
                   AND (? = 'MASTER' OR EXISTS (
                       SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                   ))
-                  AND (SELECT id FROM documentos_verificacoes
-                       WHERE documento_loja_id = dl.id AND instancia_id IS NULL
-                         AND ciclo_documento = dl.ciclo_atual
-                       ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1) IS ?`,
+                  AND (SELECT v.id FROM documentos_verificacoes v
+                       JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                       WHERE v.documento_loja_id = dl.id AND v.instancia_id IS NULL
+                         AND v.ciclo_documento = dl.ciclo_atual
+                         AND NOT EXISTS (
+                             SELECT 1 FROM documentos_verificacoes nova
+                             WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                         )
+                       ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1) IS ?`,
             args: [id, resultado as string, dataVerificacao, dataPrazo as string | null,
                 observacao || null, periodicidade === null ? null : Number(periodicidade),
                 Number(alerta), String(vinculo.tipo_controle), manual as number, acesso.usuario.id,
