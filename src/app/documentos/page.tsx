@@ -41,6 +41,8 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
     const selecionada = lojas.find((loja) => loja.id === lojaId);
     if (lojaId && !selecionada) redirect("/documentos");
 
+    const podeGerenciarInstancias = amplo && await temPermissao(usuario.id, "documentos.gerenciar_instancias");
+
     return (
         <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-6xl">
@@ -60,7 +62,7 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                 </header>
 
                 {selecionada ? (
-                    <DocumentosLoja key={selecionada.id} lojaId={selecionada.id} />
+                    <DocumentosLoja key={selecionada.id} lojaId={selecionada.id} podeGerenciarInstancias={podeGerenciarInstancias} />
                 ) : lojas.length === 0 ? (
                     <div className="rounded-xl border bg-white p-8 text-slate-600">
                         Nenhuma loja disponível para seu usuário.
