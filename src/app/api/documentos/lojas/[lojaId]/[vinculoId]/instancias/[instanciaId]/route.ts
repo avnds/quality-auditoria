@@ -63,7 +63,7 @@ export async function PATCH(request: Request, context: Contexto) {
         const cicloAnterior = Number(anterior.ciclo_atual);
         // A reativação individual preserva o ciclo e as verificações anteriores.
         // Diferentemente do vínculo de loja, o ASO não reinicia seu histórico.
-        const alteracao = await db.execute({
+        const operacoes = await db.batch([{
             sql: `UPDATE documentos_instancias
                   SET ativo = ?, atualizado_em = CURRENT_TIMESTAMP
                   WHERE id = ? AND ativo = ? AND ciclo_atual = ?
@@ -79,20 +79,19 @@ export async function PATCH(request: Request, context: Contexto) {
                     )`,
             args: [ativo, instanciaId, 1 - ativo, cicloAnterior, String(anterior.colaborador_id),
                 vinculoId, lojaId, ativo],
-        });
-        if (Number(alteracao.rowsAffected) !== 1) {
-            return NextResponse.json({ success: false, message: "A instância mudou. Atualize e tente novamente." }, { status: 409 });
-        }
-
-        await db.execute({
+        }, {
             sql: `INSERT INTO documentos_alteracoes
                     (id, entidade_tipo, entidade_id, acao, dados_anteriores, dados_novos, justificativa, usuario_id)
-                  VALUES (?, 'INSTANCIA', ?, ?, ?, ?, ?, ?)`,
+                  SELECT ?, 'INSTANCIA', ?, ?, ?, ?, ?, ?
+                  WHERE changes() = 1`,
             args: [crypto.randomUUID(), instanciaId, ativo === 1 ? "REATIVAR" : "INATIVAR",
                 JSON.stringify({ ativo: 1 - ativo, ciclo_atual: cicloAnterior }),
                 JSON.stringify({ ativo, ciclo_atual: cicloAnterior }),
                 justificativa || null, acesso.usuario.id],
-        });
+        }], "write");
+        if (Number(operacoes[0].rowsAffected) !== 1) {
+            return NextResponse.json({ success: false, message: "A instância mudou. Atualize e tente novamente." }, { status: 409 });
+        }
         return NextResponse.json({
             success: true,
             message: ativo === 1 ? "ASO reativado, mantendo o histórico." : "ASO inativado.",
