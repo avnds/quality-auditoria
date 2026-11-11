@@ -40,7 +40,7 @@ export async function PATCH(request: Request, context: Contexto) {
                   JOIN lojas l ON l.id = dl.loja_id
                   WHERE di.id = ? AND dl.id = ? AND dl.loja_id = ?
                     AND c.loja_id = dl.loja_id AND dc.modalidade = 'COLABORADOR'
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     )) LIMIT 1`,
