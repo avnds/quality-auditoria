@@ -105,7 +105,7 @@ export async function POST(request: Request, context: Contexto) {
         }
 
         const id = crypto.randomUUID();
-        const insercao = await db.execute({
+        const operacoes = await db.batch([{
             sql: `INSERT INTO documentos_verificacoes
                     (id, documento_loja_id, instancia_id, ciclo_documento, ciclo_instancia,
                      versao, resultado, data_verificacao, data_prazo, observacao,
@@ -144,8 +144,19 @@ export async function POST(request: Request, context: Contexto) {
                 manual as number, acesso.usuario.id,
                 instanciaId, vinculoId, lojaId, cicloInstancia, cicloDocumento,
                 acesso.usuario.perfil, acesso.usuario.id, ultimaId],
-        });
-        if (Number(insercao.rowsAffected) !== 1) {
+        }, {
+            sql: `UPDATE documentos_rascunhos
+                  SET status = 'CONFIRMADO', verificacao_confirmada_id = ?,
+                      atualizado_em = CURRENT_TIMESTAMP
+                  WHERE usuario_id = ? AND documento_loja_id = ?
+                    AND instancia_id = ? AND ciclo_documento = ?
+                    AND ciclo_instancia = ? AND status = 'EM_EDICAO'
+                    AND ultima_verificacao_vista_id IS ?
+                    AND EXISTS (SELECT 1 FROM documentos_verificacoes WHERE id = ?)`,
+            args: [id, acesso.usuario.id, vinculoId, instanciaId,
+                cicloDocumento, cicloInstancia, ultimaId, id],
+        }], "write");
+        if (Number(operacoes[0].rowsAffected) !== 1) {
             return NextResponse.json({
                 success: false, message: "O ASO ou seu histórico mudou. Atualize antes de confirmar.",
             }, { status: 409 });
