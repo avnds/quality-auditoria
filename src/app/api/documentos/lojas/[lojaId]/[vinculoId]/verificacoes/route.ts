@@ -197,6 +197,18 @@ export async function POST(request: Request, context: Contexto) {
                 success: false, message: "O documento ou seu histórico mudou. Atualize antes de confirmar.",
             }, { status: 409 });
         }
+        // O registro confirmado é a fonte de verdade; o rascunho do autor
+        // deixa de ser editável, sem apagar o histórico de edição.
+        await db.execute({
+            sql: `UPDATE documentos_rascunhos
+                  SET status = 'CONFIRMADO', verificacao_confirmada_id = ?,
+                      atualizado_em = CURRENT_TIMESTAMP
+                  WHERE usuario_id = ? AND documento_loja_id = ?
+                    AND instancia_id IS NULL AND ciclo_documento = ?
+                    AND status = 'EM_EDICAO'
+                    AND ultima_verificacao_vista_id IS ?`,
+            args: [id, acesso.usuario.id, vinculoId, ciclo, ultimaId],
+        });
         return NextResponse.json({ success: true, verificacao_id: id, ciclo_documento: ciclo }, { status: 201 });
     } catch (error) {
         console.error("Erro ao confirmar verificação documental:", error);
