@@ -71,8 +71,14 @@ export async function POST(request: Request, context: Contexto) {
         }
 
         const loja = await db.execute({
-            sql: "SELECT id FROM lojas WHERE id = ? AND ativo = 1 LIMIT 1",
-            args: [lojaId],
+            sql: `SELECT l.id FROM lojas l
+                  WHERE l.id = ? AND l.ativo = 1
+                    AND (? = 'MASTER' OR EXISTS (
+                        SELECT 1 FROM usuario_lojas ul
+                        WHERE ul.loja_id = l.id AND ul.usuario_id = ?
+                    ))
+                  LIMIT 1`,
+            args: [lojaId, acesso.usuario.perfil, acesso.usuario.id],
         });
         if (!loja.rows.length) {
             return NextResponse.json({ success: false, message: "Loja inexistente ou inativa." }, { status: 404 });
