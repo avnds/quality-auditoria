@@ -24,6 +24,10 @@ export default function FormularioVerificacao({
     const [editavel, setEditavel] = useState(true);
     const [alterado, setAlterado] = useState(false);
     const seq = useRef(0);
+    const fila = useRef<Promise<void>>(Promise.resolve());
+    const dadosRef = useRef(dados);
+    const versaoRef = useRef(0);
+    const confirmandoRef = useRef(false);
     const base = `/api/documentos/lojas/${encodeURIComponent(lojaId)}/${encodeURIComponent(vinculoId)}${instanciaId ? `/instancias/${encodeURIComponent(instanciaId)}` : ""}`;
 
     const carregar = useCallback(async () => {
@@ -45,6 +49,13 @@ export default function FormularioVerificacao({
                     prazo_informado_manualmente: Number(r.prazo_informado_manualmente) === 1,
                 });
             }
+            dadosRef.current = json.rascunho ? {
+                resultado: json.rascunho.resultado ?? "", data_verificacao: json.rascunho.data_verificacao ?? "",
+                data_prazo: json.rascunho.data_prazo ?? "", observacao: json.rascunho.observacao ?? "",
+                prazo_informado_manualmente: Number(json.rascunho.prazo_informado_manualmente) === 1,
+            } : vazio;
+            if (!json.rascunho) setDados(vazio);
+            versaoRef.current += 1;
             setAlterado(false);
         } catch (e) {
             setErro(e instanceof Error ? e.message : "Erro ao carregar.");
@@ -55,11 +66,14 @@ export default function FormularioVerificacao({
 
     useEffect(() => { void carregar(); }, [carregar]);
 
-    const salvar = useCallback(async (atual: Dados) => {
+    const salvar = useCallback(async (atual: Dados, versao: number) => {
         if (!editavel || precisaRevisar) return false;
-        setSalvando(true);
-        try {
-            const resposta = await fetch(`${base}/rascunho`, {
+        let sucesso = false;
+        const tarefa = fila.current.then(async () => {
+            if (confirmandoRef.current || versao !== versaoRef.current) return;
+            setSalvando(true);
+            try {
+                const resposta = await fetch(`${base}/rascunho`, {
                 method: "PUT", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     resultado: atual.resultado || null,
@@ -76,43 +90,64 @@ export default function FormularioVerificacao({
                 throw new Error(json.message ?? "O histórico mudou. Revise antes de continuar.");
             }
             if (!resposta.ok || !json.success) throw new Error(json.message ?? "Não foi possível salvar.");
-            setMensagem("Rascunho salvo.");
-            setErro("");
-            return true;
-        } catch (e) {
-            setErro(e instanceof Error ? e.message : "Erro ao salvar.");
-            return false;
-        } finally {
-            setSalvando(false);
-        }
+                if (versao === versaoRef.current) {
+                    setMensagem("Rascunho salvo.");
+                    setErro("");
+                    setAlterado(false);
+                }
+                sucesso = true;
+            } catch (e) {
+                setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+            } finally {
+                setSalvando(false);
+            }
+        });
+        fila.current = tarefa.catch(() => {});
+        await tarefa;
+        return sucesso;
     }, [base, editavel, precisaRevisar, vista]);
 
     useEffect(() => {
         if (!alterado || carregando || precisaRevisar || !editavel) return;
         const id = ++seq.current;
+        const versao = versaoRef.current;
         const temporizador = setTimeout(() => {
-            if (id === seq.current) void salvar(dados).then((ok) => { if (ok && id === seq.current) setAlterado(false); });
+            if (id === seq.current) void salvar(dadosRef.current, versao);
         }, 5000);
         return () => clearTimeout(temporizador);
     }, [dados, alterado, carregando, precisaRevisar, editavel, salvar]);
 
     function atualizar(patch: Partial<Dados>) {
-        setDados((atual) => ({ ...atual, ...patch }));
+        const proximo = { ...dadosRef.current, ...patch };
+        dadosRef.current = proximo;
+        versaoRef.current += 1;
+        setDados(proximo);
         setAlterado(true);
         setMensagem("");
     }
 
+    function salvarAoSair() {
+        if (alterado && !carregando && !precisaRevisar && editavel) {
+            void salvar(dadosRef.current, versaoRef.current);
+        }
+    }
+
     async function confirmar() {
         setErro("");
+        confirmandoRef.current = true;
+        await fila.current;
+        if (precisaRevisar || !editavel) { confirmandoRef.current = false; return; }
         if (!dados.resultado || !dados.data_verificacao) {
             setErro("Informe o resultado e a data da verificação.");
+            confirmandoRef.current = false;
             return;
         }
         if ((dados.resultado === "NAO_APRESENTADO" || !dados.data_prazo) && !dados.observacao.trim()) {
             setErro("A observação é obrigatória quando o documento não foi apresentado ou não possui prazo.");
+            confirmandoRef.current = false;
             return;
         }
-        if (!window.confirm("Confirmar esta verificação? O registro ficará no histórico e só poderá ser corrigido por usuário autorizado.")) return;
+        if (!window.confirm("Confirmar esta verificação? O registro ficará no histórico e só poderá ser corrigido por usuário autorizado.")) { confirmandoRef.current = false; return; }
         try {
             const resposta = await fetch(`${base}/verificacoes`, {
                 method: "POST", headers: { "Content-Type": "application/json" },
@@ -128,12 +163,16 @@ export default function FormularioVerificacao({
             if (resposta.status === 409) setPrecisaRevisar(true);
             if (!resposta.ok || !json.success) throw new Error(json.message ?? "Não foi possível confirmar.");
             setMensagem("Verificação confirmada.");
+            dadosRef.current = vazio;
+            versaoRef.current += 1;
             setDados(vazio);
             setAlterado(false);
             aoConfirmar();
             await carregar();
         } catch (e) {
             setErro(e instanceof Error ? e.message : "Erro ao confirmar.");
+        } finally {
+            confirmandoRef.current = false;
         }
     }
 
@@ -144,7 +183,7 @@ export default function FormularioVerificacao({
             <button type="button" onClick={() => { setPrecisaRevisar(false); void carregar(); }} className="ml-2 font-bold underline">Recarregar</button>
         </div>}
         {!editavel && <p className="text-sm text-red-700">Documento inativo. Edição bloqueada.</p>}
-        <fieldset disabled={!editavel || precisaRevisar} className="grid gap-3 sm:grid-cols-2">
+        <fieldset onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) salvarAoSair(); }} disabled={!editavel || precisaRevisar} className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium text-slate-700">Resultado
                 <select value={dados.resultado} onChange={(e) => atualizar({ resultado: e.target.value as Dados["resultado"], data_prazo: e.target.value === "NAO_APRESENTADO" ? "" : dados.data_prazo })} className="mt-1 w-full rounded-lg border p-2">
                     <option value="">Selecione</option><option value="APRESENTADO">Apresentado</option><option value="NAO_APRESENTADO">Não apresentado</option>
@@ -167,7 +206,7 @@ export default function FormularioVerificacao({
         {erro && <p role="alert" className="text-sm text-red-700">{erro}</p>}
         {mensagem && <p className="text-sm text-emerald-700">{mensagem}</p>}
         <div className="flex flex-wrap gap-3">
-            <button type="button" disabled={!editavel || precisaRevisar || salvando} onClick={() => void salvar(dados)} className="rounded-lg border border-[#22365b] px-4 py-2 text-sm font-semibold text-[#22365b] disabled:opacity-50">{salvando ? "Salvando..." : "Salvar rascunho"}</button>
+            <button type="button" disabled={!editavel || precisaRevisar || salvando} onClick={() => void salvar(dadosRef.current, versaoRef.current)} className="rounded-lg border border-[#22365b] px-4 py-2 text-sm font-semibold text-[#22365b] disabled:opacity-50">{salvando ? "Salvando..." : "Salvar rascunho"}</button>
             <button type="button" disabled={!editavel || precisaRevisar || salvando} onClick={() => void confirmar()} className="rounded-lg bg-[#22365b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Confirmar verificação</button>
         </div>
     </div>;
