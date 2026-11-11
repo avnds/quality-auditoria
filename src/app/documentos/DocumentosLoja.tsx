@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import FormularioVerificacao from "./FormularioVerificacao";
 import GerenciarDocumentos from "./GerenciarDocumentos";
 
@@ -39,6 +39,7 @@ export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGe
     const [status, setStatus] = useState<Status[]>([]);
     const [resumo, setResumo] = useState<Resumo | null>(null);
     const [carregando, setCarregando] = useState(true);
+    const [carregado, setCarregado] = useState(false);
     const [erro, setErro] = useState("");
     const [aberto, setAberto] = useState<string | null>(null);
     const [revisao, setRevisao] = useState(0);
@@ -64,6 +65,7 @@ export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGe
                 setDocumentos(dadosLista.documentos);
                 setStatus(dadosStatus.documentos);
                 setResumo(dadosStatus.resumo);
+                setCarregado(true);
             } catch (error) {
                 if (!controller.signal.aborted) setErro(error instanceof Error ? error.message : "Erro ao carregar.");
             } finally {
@@ -119,11 +121,12 @@ export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGe
         }
     }
 
-    if (carregando) return <div className="rounded-xl bg-white p-8 text-slate-600">Carregando documentos...</div>;
-    if (erro) return <div role="alert" className="rounded-xl border border-red-200 bg-white p-6 text-red-700">{erro}</div>;
+    if (carregando && !carregado) return <div className="rounded-xl bg-white p-8 text-slate-600">Carregando documentos...</div>;
+    if (erro && !carregado) return <div role="alert" className="rounded-xl border border-red-200 bg-white p-6 text-red-700">{erro}</div>;
 
     return (
         <div className="space-y-6">
+            {erro && <p role="alert" className="rounded-lg border border-red-200 bg-white p-3 text-sm text-red-700">{erro}</p>}
             {podeGerenciarLojas && <GerenciarDocumentos lojaId={lojaId} documentos={documentos} aoAtualizar={() => setRevisao((valor) => valor + 1)} />}
             {resumo && <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">Documentos e ASOs</p><p className="mt-1 text-2xl font-bold text-[#22365b]">{resumo.total}</p></div>
