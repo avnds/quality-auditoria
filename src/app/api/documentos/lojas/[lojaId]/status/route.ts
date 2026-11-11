@@ -84,7 +84,7 @@ export async function GET(_request: Request, context: Contexto) {
                              v.id AS verificacao_id, v.resultado, v.data_prazo,
                              v.data_verificacao,
                              ROW_NUMBER() OVER (
-                                 PARTITION BY a.documento_loja_id, a.instancia_id
+                                 PARTITION BY a.documento_loja_id, a.colaborador_id, a.instancia_id
                                  ORDER BY v.data_verificacao DESC,
                                           v.registrado_original_em DESC, v.id_original DESC
                              ) AS posicao
