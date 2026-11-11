@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { permissoesDoPerfil } from "@/lib/auth/permissoes-padrao";
 import { requirePermission } from "@/lib/auth/require-permission";
 import {
     forbiddenResponse,
@@ -281,34 +282,23 @@ export async function PATCH(
         };
 
         if (perfil !== undefined && perfil !== String(usuarioAlvo.perfil)) {
-            const permissoesDocumentacao = perfil === "SUPERVISORA"
-                ? [
-                    "documentos.visualizar",
-                    "documentos.verificar",
-                    "documentos.corrigir",
-                    "documentos.gerenciar_catalogo",
-                    "documentos.gerenciar_lojas",
-                    "documentos.gerenciar_instancias",
-                ]
-                : ["documentos.visualizar", "documentos.verificar"];
+            // Mudanca de perfil revoga permissoes anteriores para impedir
+            // que privilegios administrativos sobrevivam ao rebaixamento.
+            const permissoes = permissoesDoPerfil(perfil as "CONSULTOR" | "SUPERVISORA");
 
             await db.batch([
                 atualizarUsuario,
                 {
-                    sql: `
-                        DELETE FROM usuario_permissao
-                        WHERE usuario_id = ?
-                          AND permissao_id LIKE 'documentos.%'
-                    `,
+                    sql: "DELETE FROM usuario_permissao WHERE usuario_id = ?",
                     args: [id],
                 },
                 {
                     sql: `
-                        INSERT OR IGNORE INTO usuario_permissao (usuario_id, permissao_id)
+                        INSERT INTO usuario_permissao (usuario_id, permissao_id)
                         SELECT ?, id FROM permissoes
-                        WHERE id IN (${permissoesDocumentacao.map(() => "?").join(",")})
+                        WHERE id IN (${permissoes.map(() => "?").join(",")})
                     `,
-                    args: [id, ...permissoesDocumentacao],
+                    args: [id, ...permissoes],
                 },
             ], "write");
         } else {
