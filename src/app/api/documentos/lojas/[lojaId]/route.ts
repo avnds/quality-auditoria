@@ -15,10 +15,10 @@ export async function GET(_request: Request, context: Contexto) {
         const { lojaId } = await context.params;
         const usuario = acesso.usuario;
         const loja = await db.execute({
-            sql: usuario.perfil === "MASTER"
+            sql: usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA"
                 ? "SELECT id FROM lojas WHERE id = ? LIMIT 1"
                 : "SELECT l.id FROM lojas l JOIN usuario_lojas ul ON ul.loja_id = l.id WHERE l.id = ? AND ul.usuario_id = ? LIMIT 1",
-            args: usuario.perfil === "MASTER" ? [lojaId] : [lojaId, usuario.id],
+            args: usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA" ? [lojaId] : [lojaId, usuario.id],
         });
         if (!loja.rows.length) {
             return NextResponse.json({ success: false, message: "Loja não encontrada ou sem acesso." }, { status: 404 });
