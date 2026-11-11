@@ -1,4 +1,6 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import type { InValue } from "@libsql/client";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import db from "@/lib/db";
@@ -104,6 +106,41 @@ export async function POST(request: Request) {
     if (!usuario) return fail("Usuário não autenticado.", 401);
     if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar bancos de dados.", 403);
 
+    // A autorização é assinada pelo servidor e vinculada ao MASTER e ao banco de destino.
+    // O download pode ser cancelado pelo navegador; por isso a confirmação humana continua necessária.
+    const cookieStore = await cookies();
+    const token = cookieStore.get("quality_restore_prepared")?.value;
+    const secret = process.env.TURSO_AUTH_TOKEN;
+    if (!token || !secret) {
+        return fail("Baixe primeiro o backup de recuperação do banco de destino.", 403);
+    }
+    let authorized = false;
+    try {
+        const raw = Buffer.from(token, "base64url").toString("utf8");
+        const lastColon = raw.lastIndexOf(":");
+        const payload = raw.slice(0, lastColon);
+        const signature = raw.slice(lastColon + 1);
+        const fields = payload.split(":");
+        const expected = createHmac("sha256", secret).update(payload).digest("hex");
+        const signatureBuffer = Buffer.from(signature, "hex");
+        const expectedBuffer = Buffer.from(expected, "hex");
+        const issuedAt = Number(fields[2]);
+        authorized = fields.length === 4
+            && fields[0] === String(usuario.id)
+            && fields[1] === ambienteBanco
+            && Number.isSafeInteger(issuedAt)
+            && issuedAt <= Date.now()
+            && Date.now() - issuedAt <= 10 * 60 * 1000
+            && signature.length === 64
+            && signatureBuffer.length === expectedBuffer.length
+            && timingSafeEqual(signatureBuffer, expectedBuffer);
+    } catch {
+        authorized = false;
+    }
+    if (!authorized) {
+        return fail("Autorização de recuperação inválida ou expirada. Baixe um novo backup.", 403);
+    }
+
     let transaction: Awaited<ReturnType<typeof db.transaction>> | undefined;
 
     try {
@@ -188,6 +225,7 @@ export async function POST(request: Request) {
         }
 
         await transaction.commit();
+        cookieStore.delete("quality_restore_prepared");
         return NextResponse.redirect(new URL("/backup-restauracao?restaurado=1", request.url), 303);
     } catch (error) {
         if (transaction) {
