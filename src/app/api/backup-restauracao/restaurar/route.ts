@@ -1,7 +1,10 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import type { InValue } from "@libsql/client";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import db from "@/lib/db";
+import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,18 +95,66 @@ function validateBackup(value: unknown): BackupFile {
 }
 
 export async function POST(request: Request) {
-    if (process.env.NODE_ENV === "production") return fail("A restauração está bloqueada neste ambiente.", 403);
-
+    // A restrição deve considerar o banco real, não o ambiente da aplicação.
+    let ambienteBanco: "development" | "production";
+    try {
+        ambienteBanco = identificarAmbienteBanco();
+    } catch {
+        return fail("Não foi possível identificar o banco conectado. Restauração bloqueada.", 403);
+    }
     const usuario = await getCurrentUser();
     if (!usuario) return fail("Usuário não autenticado.", 401);
-    if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar o banco DEV.", 403);
+    if (usuario.perfil !== "MASTER") return fail("Somente o perfil MASTER pode restaurar bancos de dados.", 403);
+
+    // A autorização é assinada pelo servidor e vinculada ao MASTER e ao banco de destino.
+    // O download pode ser cancelado pelo navegador; por isso a confirmação humana continua necessária.
+    const cookieStore = await cookies();
+    const token = cookieStore.get("quality_restore_prepared")?.value;
+    const secret = process.env.TURSO_AUTH_TOKEN;
+    if (!token || !secret) {
+        return fail("Baixe primeiro o backup de recuperação do banco de destino.", 403);
+    }
+    let authorized = false;
+    try {
+        const raw = Buffer.from(token, "base64url").toString("utf8");
+        const lastColon = raw.lastIndexOf(":");
+        const payload = raw.slice(0, lastColon);
+        const signature = raw.slice(lastColon + 1);
+        const fields = payload.split(":");
+        const expected = createHmac("sha256", secret).update(payload).digest("hex");
+        const signatureBuffer = Buffer.from(signature, "hex");
+        const expectedBuffer = Buffer.from(expected, "hex");
+        const issuedAt = Number(fields[2]);
+        authorized = fields.length === 4
+            && fields[0] === String(usuario.id)
+            && fields[1] === ambienteBanco
+            && Number.isSafeInteger(issuedAt)
+            && issuedAt <= Date.now()
+            && Date.now() - issuedAt <= 10 * 60 * 1000
+            && signature.length === 64
+            && signatureBuffer.length === expectedBuffer.length
+            && timingSafeEqual(signatureBuffer, expectedBuffer);
+    } catch {
+        authorized = false;
+    }
+    if (!authorized) {
+        return fail("Autorização de recuperação inválida ou expirada. Baixe um novo backup.", 403);
+    }
 
     let transaction: Awaited<ReturnType<typeof db.transaction>> | undefined;
-    let foreignKeysDisabled = false;
 
     try {
         const form = await request.formData();
-        if (form.get("confirmacao") !== "RESTAURAR DEV") return fail('Digite exatamente "RESTAURAR DEV" para confirmar.');
+        const confirmacaoEsperada = ambienteBanco === "production" ? "RESTAURAR PRODUCAO" : "RESTAURAR DEV";
+        if (form.get("confirmacao") !== confirmacaoEsperada) {
+            return fail(`Digite exatamente "${confirmacaoEsperada}" para confirmar.`);
+        }
+        if (form.get("arquivo_recuperacao_salvo") !== "confirmado") {
+            return fail("Confirme que o backup de recuperação foi salvo antes de restaurar.");
+        }
+        if (ambienteBanco === "production" && form.get("backup_recuperacao") !== "confirmado") {
+            return fail("Confirme que existe um backup de recuperação da produção salvo fora do sistema.");
+        }
         const file = form.get("arquivo");
         if (!(file instanceof File) || file.size === 0) return fail("Selecione um arquivo JSON de backup.");
         if (file.size > 25 * 1024 * 1024) return fail("O arquivo excede o limite de 25 MB.");
@@ -112,22 +163,46 @@ export async function POST(request: Request) {
         try { parsed = JSON.parse(await file.text()); } catch { return fail("O arquivo não contém JSON válido."); }
         const backup = validateBackup(parsed);
 
-        await db.execute("PRAGMA foreign_keys = OFF");
-        foreignKeysDisabled = true;
+        // Mantém as chaves estrangeiras ativas: PRAGMA em db.execute() pode
+        // usar outra conexão, diferente da transação remota do Turso.
         transaction = await db.transaction("write");
         await transaction.execute("PRAGMA defer_foreign_keys = ON");
 
-        const currentIndexes = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'index' AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%'");
-        for (const row of currentIndexes.rows) {
-            const name = String(row.name);
-            await transaction.execute('DROP INDEX IF EXISTS "' + name.replace(/"/g, '""') + '"');
+        const currentTables = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+        const names = currentTables.rows.map((row) => String(row.name));
+        for (const name of names) {
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+                throw new Error("O banco atual contém um nome de objeto inesperado; restauração cancelada.");
+            }
         }
 
-        const currentTables = await transaction.execute("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
-        for (const row of currentTables.rows) {
-            const name = String(row.name);
-            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("O banco atual contém um nome de objeto inesperado; restauração cancelada.");
-            await transaction.execute('DROP TABLE IF EXISTS "' + name.replace(/"/g, '""') + '"');
+        // Exclui tabelas filhas antes das tabelas referenciadas. Nunca
+        // depende da ordem arbitrária retornada por sqlite_schema.
+        const existing = new Set(names);
+        const dependencies = new Map<string, Set<string>>();
+        for (const name of names) {
+            const foreignKeys = await transaction.execute('PRAGMA foreign_key_list("' + name + '")');
+            const parents = new Set<string>();
+            for (const key of foreignKeys.rows) {
+                const parent = String(key.table);
+                if (parent !== name && existing.has(parent)) parents.add(parent);
+            }
+            dependencies.set(name, parents);
+        }
+        const dropOrder: string[] = [];
+        const pending = new Set(names);
+        while (pending.size > 0) {
+            const next = [...pending].find((name) =>
+                ![...pending].some((other) => other !== name && dependencies.get(other)?.has(name))
+            );
+            if (!next) {
+                throw new Error("Dependências circulares entre tabelas: restauração cancelada por segurança.");
+            }
+            dropOrder.push(next);
+            pending.delete(next);
+        }
+        for (const name of dropOrder) {
+            await transaction.execute('DROP TABLE IF EXISTS "' + name + '"');
         }
 
         for (const table of backup.tables) await transaction.execute(table.createSql);
@@ -153,20 +228,25 @@ export async function POST(request: Request) {
         }
 
         await transaction.commit();
-        return NextResponse.redirect(new URL("/backup-restauracao?restaurado=1", request.url), 303);
+        const response = NextResponse.redirect(new URL("/backup-restauracao?restaurado=1", request.url), 303);
+        response.cookies.set("quality_restore_prepared", "", {
+            httpOnly: true,
+            sameSite: "strict",
+            secure: new URL(request.url).protocol === "https:",
+            path: "/api/backup-restauracao/restaurar",
+            maxAge: 0,
+        });
+        return response;
     } catch (error) {
         if (transaction) {
             try { await transaction.rollback(); } catch (rollbackError) { console.error("Erro ao reverter restauração lógica:", rollbackError); }
         }
-        console.error("Erro na restauração lógica DEV:", error);
+        console.error("Erro na restauração lógica:", error);
         const message = error instanceof Error ? error.message : "Erro inesperado na restauração.";
         return fail(message, 400);
     } finally {
         if (transaction) {
             try { await transaction.close(); } catch (error) { console.error("Erro ao fechar transação de restauração:", error); }
-        }
-        if (foreignKeysDisabled) {
-            try { await db.execute("PRAGMA foreign_keys = ON"); } catch (error) { console.error("Erro ao reativar foreign_keys:", error); }
         }
     }
 }

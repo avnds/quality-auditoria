@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    // Exportação permitida em DEV e produção, restrita ao perfil MASTER autenticado.
+    // Exportação permitida em DEV e produção para MASTER e SUPERVISORA autenticados.
     const usuario = await getCurrentUser();
 
     if (!usuario) {
@@ -17,11 +17,11 @@ export async function GET() {
         );
     }
 
-    if (usuario.perfil !== "MASTER") {
+    if (usuario.perfil !== "MASTER" && usuario.perfil !== "SUPERVISORA") {
         return NextResponse.json(
             {
                 success: false,
-                message: "Somente o perfil MASTER pode exportar o backup.",
+                message: "Somente MASTER e SUPERVISORA podem exportar o backup.",
             },
             { status: 403 }
         );

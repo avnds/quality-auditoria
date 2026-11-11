@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 
 type PageProps = {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -21,6 +22,15 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
             </main>
         );
     }
+
+    let ambienteBanco: "development" | "production" | "unknown" = "unknown";
+    try {
+        ambienteBanco = identificarAmbienteBanco();
+    } catch {
+        // Não oferecer restauração quando a conexão não é reconhecida.
+    }
+    const producao = ambienteBanco === "production";
+    const confirmacao = producao ? "RESTAURAR PRODUCAO" : "RESTAURAR DEV";
 
     return (
         <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -45,12 +55,20 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                     <a href="/api/backup-restauracao" className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182846]">
                         Baixar backup do banco conectado
                     </a>
-                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível para MASTER autenticado no ambiente local e em produção. Ao baixar na aplicação publicada, o arquivo contém os dados do banco conectado à produção. O arquivo contém dados sensíveis; armazene-o com segurança. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">O backup é gerado a partir do banco realmente conectado, inclusive em ambientes Preview. Confirme o destino indicado na seção de restauração. O arquivo contém dados sensíveis; armazene-o com segurança. Arquivos externos, como evidências no Vercel Blob, não são incluídos.</p>
                 </section>
 
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
-                    <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco DEV</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ao ambiente local. Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
+                    <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco {producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ({producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}). Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
+                    <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <h3 className="font-bold text-[#22365b]">Etapa 1 — Backup de recuperação obrigatório</h3>
+                        <p className="mt-2 text-sm text-slate-700">Antes de restaurar, baixe uma cópia atualizada do banco {producao ? "PRODUÇÃO" : "DEV"} que será substituído. O arquivo contém dados sensíveis; guarde-o em local seguro. A autorização para restaurar vale por 10 minutos após o download ser solicitado.</p>
+                        <a href="/api/backup-restauracao/preparar" className="mt-3 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#182846]">
+                            Baixar backup de recuperação e autorizar restauração
+                        </a>
+                    </div>
+                    <h3 className="mt-6 font-bold text-[#c22a2e]">Etapa 2 — Confirmar e restaurar</h3>
                     <form action="/api/backup-restauracao/restaurar" method="post" encType="multipart/form-data" className="mt-5 space-y-4">
                         <div>
                             <label htmlFor="arquivo" className="mb-2 block text-sm font-semibold text-slate-800">Arquivo JSON do backup</label>
@@ -58,14 +76,24 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                             <p className="mt-1 text-xs text-slate-500">Limite: 25 MB. O arquivo deve ter sido gerado pelo backup lógico do Quality Auditoria; backups de DEV e produção são aceitos.</p>
                         </div>
                         <div>
-                            <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: RESTAURAR DEV</label>
-                            <input id="confirmacao" name="confirmacao" type="text" autoComplete="off" required pattern="RESTAURAR DEV" title="Digite exatamente RESTAURAR DEV" className="block w-full rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-900" />
+                            <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: {confirmacao}</label>
+                            <input id="confirmacao" name="confirmacao" type="text" autoComplete="off" required pattern={confirmacao} title={`Digite exatamente ${confirmacao}`} className="block w-full rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-900" />
                         </div>
-                        <button type="submit" className="inline-flex items-center justify-center rounded-xl bg-[#c22a2e] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
-                            Substituir dados do banco DEV
+                        <label className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                            <input type="checkbox" name="arquivo_recuperacao_salvo" value="confirmado" required className="mt-1" />
+                            Confirmo que o backup de recuperação da etapa 1 foi baixado e está salvo em meu computador. Entendo que o sistema não consegue verificar se o download foi concluído.
+                        </label>
+                        {producao && (
+                            <label className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+                                <input type="checkbox" name="backup_recuperacao" value="confirmado" required className="mt-1" />
+                                Confirmo que gerei e guardei fora do sistema um backup de recuperação atualizado do banco de PRODUÇÃO e compreendo que os dados atuais serão substituídos.
+                            </label>
+                        )}
+                        <button type="submit" disabled={ambienteBanco === "unknown"} className="inline-flex items-center justify-center rounded-xl bg-[#c22a2e] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
+                            Substituir dados do banco {producao ? "PRODUÇÃO" : "DEV"}
                         </button>
                     </form>
-                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">O download do backup é permitido para MASTER autenticado também em produção. A restauração continua restrita ao ambiente local de desenvolvimento. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada.</p>
+                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">A restauração é exclusiva do MASTER e substitui todos os dados do banco conectado. Em PRODUÇÃO, interrompa operações de usuários durante a restauração para evitar alterações simultâneas. Confirme o destino antes de enviar. A aplicação tenta reverter falhas de validação, mas não garante recuperação automática de todas as falhas de infraestrutura; preserve o backup de recuperação.</p>
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -73,8 +101,8 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                     <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
                         <li>Restaura tabelas, índices e registros incluídos no arquivo.</li>
                         <li>Confere as quantidades de linhas e executa uma verificação de chaves estrangeiras antes de confirmar a transação.</li>
-                        <li>Não restaura fotos e arquivos do Vercel Blob.</li>
-                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente DEV.</li>
+                        <li>Não restaura fotos e arquivos do Vercel Blob nem outros arquivos armazenados fora do Turso.</li>
+                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado. Sessões podem ser encerradas porque os dados de usuários e sessões também são substituídos.</li>
                     </ul>
                 </section>
             </div>
