@@ -54,6 +54,11 @@ const itensMenu: ItemMenu[] = [
         permissao: "certificados.visualizar",
     },
     {
+        nome: "Documentos",
+        href: "/documentos",
+        permissao: "documentos.visualizar",
+    },
+    {
         nome: "Relatórios",
         href: "/relatorios",
         permissao: "relatorios.visualizar",
