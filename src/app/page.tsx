@@ -613,6 +613,23 @@ export default async function Home() {
                     </>
                 ) : null}
 
+                {ehSupervisora ? (
+                    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-[#12223f]">Backup do banco de dados</h2>
+                                <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                                    Baixe uma cópia da estrutura e dos dados do banco conectado. O arquivo contém informações sensíveis e deve ser guardado em local seguro.
+                                </p>
+                                <p className="mt-2 text-xs text-slate-500">Arquivos armazenados no Vercel Blob não são incluídos.</p>
+                            </div>
+                            <a href="/api/backup-restauracao" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-[#22365b] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
+                                Baixar backup
+                            </a>
+                        </div>
+                    </section>
+                ) : null}
+
                 {ehConsultor ? (
                     <>
                         <section className="mb-8">
