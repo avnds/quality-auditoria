@@ -80,8 +80,8 @@ export async function POST(request: Request) {
             (descricao !== null && descricao.length > 2000) ||
             !["VALIDADE", "REVISAO"].includes(String(tipo)) ||
             !["LOJA", "COLABORADOR"].includes(String(modalidade)) ||
-            !(periodicidade === null || (Number.isInteger(periodicidade) && Number(periodicidade) > 0 && Number(periodicidade) <= 1200)) ||
-            !Number.isInteger(alerta) || Number(alerta) < 0 || Number(alerta) > 3650
+            !(periodicidade === null || (typeof periodicidade === "number" && Number.isInteger(periodicidade) && periodicidade > 0 && periodicidade <= 1200)) ||
+            typeof alerta !== "number" || !Number.isInteger(alerta) || alerta < 0 || alerta > 3650
         ) {
             return NextResponse.json({ success: false, message: "Confira nome, descrição, tipo, modalidade, periodicidade e alerta." }, { status: 400 });
         }
