@@ -38,10 +38,10 @@ export async function GET() {
                     FROM documentos_lojas dl
                     JOIN lojas l ON l.id = dl.loja_id
                     JOIN documentos_catalogo dc ON dc.id = dl.documento_id
-                    JOIN documentos_instancias di ON di.documento_loja_id = dl.id
-                    JOIN colaboradores c ON c.id = di.colaborador_id AND c.loja_id = l.id
+                    JOIN colaboradores c ON c.loja_id = l.id
+                    LEFT JOIN documentos_instancias di ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id
                     WHERE l.ativo = 1 AND dl.ativo = 1 AND dc.ativo = 1
-                      AND di.ativo = 1 AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
+                      AND (di.id IS NULL OR di.ativo = 1) AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
                       AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                           SELECT 1 FROM usuario_lojas ul
                           WHERE ul.loja_id = l.id AND ul.usuario_id = ?
@@ -69,7 +69,7 @@ export async function GET() {
                       SELECT a.*, v.id AS verificacao_id, v.resultado,
                              v.data_verificacao, v.data_prazo,
                              ROW_NUMBER() OVER (
-                                 PARTITION BY a.documento_loja_id, a.instancia_id
+                                 PARTITION BY a.documento_loja_id, a.colaborador_id, a.instancia_id
                                  ORDER BY v.data_verificacao DESC,
                                           v.registro_original DESC, v.id_original DESC
                              ) AS posicao
