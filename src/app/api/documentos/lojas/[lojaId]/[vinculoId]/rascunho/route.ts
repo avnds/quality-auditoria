@@ -98,7 +98,7 @@ export async function PUT(request: Request, context: Contexto) {
         const manual = dados.prazo_informado_manualmente;
         const vista = dados.ultima_verificacao_vista_id;
 
-        const dataValida = (valor: unknown) => {
+        const dataValida = (valor: unknown): valor is string => {
             if (typeof valor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
             const data = new Date(valor + "T12:00:00Z");
             return !Number.isNaN(data.getTime()) && data.toISOString().slice(0, 10) === valor;
