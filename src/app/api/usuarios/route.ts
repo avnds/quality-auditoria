@@ -209,7 +209,9 @@ export async function POST(request: Request) {
                 'auditorias.finalizar',
 
                 'relatorios.visualizar',
-                'relatorios.baixar'
+                'relatorios.baixar',
+                'documentos.visualizar',
+                'documentos.verificar'
             )
         `,
                 args: [id],
@@ -265,6 +267,12 @@ export async function POST(request: Request) {
                 'relatorios.visualizar',
                 'relatorios.gerar',
                 'relatorios.baixar',
+                'documentos.visualizar',
+                'documentos.verificar',
+                'documentos.corrigir',
+                'documentos.gerenciar_catalogo',
+                'documentos.gerenciar_lojas',
+                'documentos.gerenciar_instancias',
 
                 'sistema.visualizar_logs'
             )
