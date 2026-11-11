@@ -161,7 +161,7 @@ export async function POST(request: Request, context: Contexto) {
         const id = crypto.randomUUID();
         const periodicidade = vinculo.periodicidade_meses ?? vinculo.periodicidade_padrao;
         const alerta = vinculo.alerta_dias ?? vinculo.alerta_padrao;
-        const insercao = await db.execute({
+        const operacoes = await db.batch([{
             sql: `INSERT INTO documentos_verificacoes
                 (id, documento_loja_id, instancia_id, ciclo_documento, ciclo_instancia,
                  versao, resultado, data_verificacao, data_prazo, observacao,
@@ -191,24 +191,22 @@ export async function POST(request: Request, context: Contexto) {
                 observacao || null, periodicidade === null ? null : Number(periodicidade),
                 Number(alerta), String(vinculo.tipo_controle), manual as number, acesso.usuario.id,
                 vinculoId, lojaId, ciclo, acesso.usuario.perfil, acesso.usuario.id, ultimaId],
-        });
-        if (Number(insercao.rowsAffected) !== 1) {
-            return NextResponse.json({
-                success: false, message: "O documento ou seu histórico mudou. Atualize antes de confirmar.",
-            }, { status: 409 });
-        }
-        // O registro confirmado é a fonte de verdade; o rascunho do autor
-        // deixa de ser editável, sem apagar o histórico de edição.
-        await db.execute({
+        }, {
             sql: `UPDATE documentos_rascunhos
                   SET status = 'CONFIRMADO', verificacao_confirmada_id = ?,
                       atualizado_em = CURRENT_TIMESTAMP
                   WHERE usuario_id = ? AND documento_loja_id = ?
                     AND instancia_id IS NULL AND ciclo_documento = ?
                     AND status = 'EM_EDICAO'
-                    AND ultima_verificacao_vista_id IS ?`,
-            args: [id, acesso.usuario.id, vinculoId, ciclo, ultimaId],
-        });
+                    AND ultima_verificacao_vista_id IS ?
+                    AND EXISTS (SELECT 1 FROM documentos_verificacoes WHERE id = ?)`,
+            args: [id, acesso.usuario.id, vinculoId, ciclo, ultimaId, id],
+        }], "write");
+        if (Number(operacoes[0].rowsAffected) !== 1) {
+            return NextResponse.json({
+                success: false, message: "O documento ou seu histórico mudou. Atualize antes de confirmar.",
+            }, { status: 409 });
+        }
         return NextResponse.json({ success: true, verificacao_id: id, ciclo_documento: ciclo }, { status: 201 });
     } catch (error) {
         console.error("Erro ao confirmar verificação documental:", error);
