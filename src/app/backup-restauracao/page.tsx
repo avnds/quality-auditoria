@@ -61,6 +61,14 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
                     <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco {producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ({producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}). Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
+                    <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <h3 className="font-bold text-[#22365b]">Etapa 1 — Backup de recuperação obrigatório</h3>
+                        <p className="mt-2 text-sm text-slate-700">Antes de restaurar, baixe uma cópia atualizada do banco {producao ? "PRODUÇÃO" : "DEV"} que será substituído. O arquivo contém dados sensíveis; guarde-o em local seguro. A autorização para restaurar vale por 10 minutos após o download ser solicitado.</p>
+                        <a href="/api/backup-restauracao/preparar" className="mt-3 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#182846]">
+                            Baixar backup de recuperação e autorizar restauração
+                        </a>
+                    </div>
+                    <h3 className="mt-6 font-bold text-[#c22a2e]">Etapa 2 — Confirmar e restaurar</h3>
                     <form action="/api/backup-restauracao/restaurar" method="post" encType="multipart/form-data" className="mt-5 space-y-4">
                         <div>
                             <label htmlFor="arquivo" className="mb-2 block text-sm font-semibold text-slate-800">Arquivo JSON do backup</label>
@@ -71,6 +79,10 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                             <label htmlFor="confirmacao" className="mb-2 block text-sm font-semibold text-slate-800">Para confirmar, digite exatamente: {confirmacao}</label>
                             <input id="confirmacao" name="confirmacao" type="text" autoComplete="off" required pattern={confirmacao} title={`Digite exatamente ${confirmacao}`} className="block w-full rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-900" />
                         </div>
+                        <label className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                            <input type="checkbox" name="arquivo_recuperacao_salvo" value="confirmado" required className="mt-1" />
+                            Confirmo que o backup de recuperação da etapa 1 foi baixado e está salvo em meu computador. Entendo que o sistema não consegue verificar se o download foi concluído.
+                        </label>
                         {producao && (
                             <label className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
                                 <input type="checkbox" name="backup_recuperacao" value="confirmado" required className="mt-1" />
