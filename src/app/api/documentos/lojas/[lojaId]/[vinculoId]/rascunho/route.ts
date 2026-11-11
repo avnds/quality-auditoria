@@ -48,9 +48,14 @@ export async function GET(_request: Request, context: Contexto) {
             args: [acesso.usuario.id, vinculoId, Number(documento.ciclo_atual)],
         });
         const ultima = await db.execute({
-            sql: `SELECT id FROM documentos_verificacoes
-                  WHERE documento_loja_id = ? AND instancia_id IS NULL AND ciclo_documento = ?
-                  ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1`,
+            sql: `SELECT v.id FROM documentos_verificacoes v
+                  JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                  WHERE v.documento_loja_id = ? AND v.instancia_id IS NULL AND v.ciclo_documento = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM documentos_verificacoes nova
+                        WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                    )
+                  ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1`,
             args: [vinculoId, Number(documento.ciclo_atual)],
         });
         const ultimaId = ultima.rows.length ? String(ultima.rows[0].id) : null;
@@ -116,9 +121,14 @@ export async function PUT(request: Request, context: Contexto) {
         }
         const ciclo = Number(documento.ciclo_atual);
         const ultima = await db.execute({
-            sql: `SELECT id FROM documentos_verificacoes
-                  WHERE documento_loja_id = ? AND instancia_id IS NULL AND ciclo_documento = ?
-                  ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1`,
+            sql: `SELECT v.id FROM documentos_verificacoes v
+                  JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                  WHERE v.documento_loja_id = ? AND v.instancia_id IS NULL AND v.ciclo_documento = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM documentos_verificacoes nova
+                        WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                    )
+                  ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1`,
             args: [vinculoId, ciclo],
         });
         const ultimaId = ultima.rows.length ? String(ultima.rows[0].id) : null;
