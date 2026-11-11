@@ -55,7 +55,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                     <a href="/api/backup-restauracao" className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#22365b] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182846]">
                         Baixar backup do banco conectado
                     </a>
-                    <p className="mt-3 text-xs leading-5 text-slate-500">Disponível para MASTER autenticado no ambiente local e em produção. Ao baixar na aplicação publicada, o arquivo contém os dados do banco conectado à produção. O arquivo contém dados sensíveis; armazene-o com segurança. Fotos de evidências armazenadas no Vercel Blob não são incluídas.</p>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">O backup é gerado a partir do banco realmente conectado, inclusive em ambientes Preview. Confirme o destino indicado na seção de restauração. O arquivo contém dados sensíveis; armazene-o com segurança. Arquivos externos, como evidências no Vercel Blob, não são incluídos.</p>
                 </section>
 
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
@@ -93,7 +93,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                             Substituir dados do banco {producao ? "PRODUÇÃO" : "DEV"}
                         </button>
                     </form>
-                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">A restauração é exclusiva do MASTER e substitui todos os dados do banco conectado. Confirme o destino antes de enviar. Se a validação de dados ou chaves estrangeiras falhar, a transação será cancelada.</p>
+                    <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-900">A restauração é exclusiva do MASTER e substitui todos os dados do banco conectado. Em PRODUÇÃO, interrompa operações de usuários durante a restauração para evitar alterações simultâneas. Confirme o destino antes de enviar. A aplicação tenta reverter falhas de validação, mas não garante recuperação automática de todas as falhas de infraestrutura; preserve o backup de recuperação.</p>
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -101,8 +101,8 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                     <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
                         <li>Restaura tabelas, índices e registros incluídos no arquivo.</li>
                         <li>Confere as quantidades de linhas e executa uma verificação de chaves estrangeiras antes de confirmar a transação.</li>
-                        <li>Não restaura fotos e arquivos do Vercel Blob.</li>
-                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado.</li>
+                        <li>Não restaura fotos e arquivos do Vercel Blob nem outros arquivos armazenados fora do Turso.</li>
+                        <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado. Sessões podem ser encerradas porque os dados de usuários e sessões também são substituídos.</li>
                     </ul>
                 </section>
             </div>
