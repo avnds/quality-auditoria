@@ -55,11 +55,10 @@ export async function GET(_request: Request, context: Contexto) {
                       JOIN documentos_catalogo dc ON dc.id = dl.documento_id
                       JOIN colaboradores c ON c.loja_id = dl.loja_id
                       LEFT JOIN documentos_instancias di
-                        ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id
+                        ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id AND di.ativo = 1
                       WHERE dl.loja_id = ? AND c.loja_id = dl.loja_id
                         AND dl.ativo = 1 AND dc.ativo = 1
-                        AND (di.id IS NULL OR di.ativo = 1)
-                        AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
+                                                AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
                   ),
                   versoes AS (
                       SELECT v.*, ROW_NUMBER() OVER (
