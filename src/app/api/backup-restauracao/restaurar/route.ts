@@ -149,6 +149,9 @@ export async function POST(request: Request) {
         if (form.get("confirmacao") !== confirmacaoEsperada) {
             return fail(`Digite exatamente "${confirmacaoEsperada}" para confirmar.`);
         }
+        if (form.get("arquivo_recuperacao_salvo") !== "confirmado") {
+            return fail("Confirme que o backup de recuperação foi salvo antes de restaurar.");
+        }
         if (ambienteBanco === "production" && form.get("backup_recuperacao") !== "confirmado") {
             return fail("Confirme que existe um backup de recuperação da produção salvo fora do sistema.");
         }
