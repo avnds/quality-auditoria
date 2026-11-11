@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: Contexto) {
         const { lojaId } = await context.params;
         const loja = await db.execute({
             sql: `SELECT id FROM lojas l WHERE id = ?
-                  AND (? = 'MASTER' OR EXISTS (
+                  AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                       SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = l.id AND ul.usuario_id = ?
                   )) LIMIT 1`,
             args: [lojaId, acesso.usuario.perfil, acesso.usuario.id],
