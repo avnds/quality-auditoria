@@ -71,7 +71,7 @@ export async function POST(request: Request, context: Contexto) {
                     AND c.loja_id = dl.loja_id
                     AND di.ativo = 1 AND c.ativo = 1 AND dl.ativo = 1
                     AND dc.ativo = 1 AND l.ativo = 1 AND dc.modalidade = 'COLABORADOR'
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     )) LIMIT 1`,
@@ -123,7 +123,7 @@ export async function POST(request: Request, context: Contexto) {
                     AND c.loja_id = dl.loja_id
                     AND di.ativo = 1 AND c.ativo = 1 AND dl.ativo = 1
                     AND dc.ativo = 1 AND l.ativo = 1 AND dc.modalidade = 'COLABORADOR'
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     ))
