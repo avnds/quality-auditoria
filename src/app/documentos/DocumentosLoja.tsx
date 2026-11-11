@@ -31,7 +31,7 @@ function StatusEtiqueta({ status }: { status: string }) {
     </span>;
 }
 
-export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
+export default function DocumentosLoja({ lojaId, podeGerenciarInstancias }: { lojaId: string; podeGerenciarInstancias: boolean }) {
     const [documentos, setDocumentos] = useState<Documento[]>([]);
     const [status, setStatus] = useState<Status[]>([]);
     const [resumo, setResumo] = useState<Resumo | null>(null);
@@ -42,6 +42,7 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
     const [colaboradores, setColaboradores] = useState<Record<string, Colaborador[]>>({});
     const [buscas, setBuscas] = useState<Record<string, string>>({});
     const [erroASO, setErroASO] = useState("");
+    const [operandoASO, setOperandoASO] = useState<string | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -81,6 +82,37 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
             setColaboradores((atual) => ({ ...atual, [docId]: json.colaboradores }));
         } catch (e) {
             setErroASO(e instanceof Error ? e.message : "Erro ao consultar colaboradores.");
+        }
+    }
+
+    async function atualizarASO(docId: string, colaborador: Colaborador) {
+        const acao = !colaborador.instancia_id ? "cadastrar" : "reativar";
+        if (!window.confirm(`Deseja ${acao} o ASO de ${colaborador.nome}?`)) return;
+        const base = `/api/documentos/lojas/${encodeURIComponent(lojaId)}/${encodeURIComponent(docId)}/instancias`;
+        setOperandoASO(colaborador.colaborador_id);
+        setErroASO("");
+        try {
+            const resposta = await fetch(
+                colaborador.instancia_id ? `${base}/${encodeURIComponent(colaborador.instancia_id)}` : base,
+                {
+                    method: colaborador.instancia_id ? "PATCH" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(colaborador.instancia_id
+                        ? { ativo: true }
+                        : { colaborador_id: colaborador.colaborador_id }),
+                },
+            );
+            const json = await resposta.json();
+            if (!resposta.ok || !json.success) throw new Error(json.message ?? "Não foi possível atualizar o ASO.");
+            const atualizada = await fetch(base, { cache: "no-store" });
+            const lista = await atualizada.json();
+            if (!atualizada.ok || !lista.success) throw new Error(lista.message ?? "Não foi possível atualizar a lista.");
+            setColaboradores((atual) => ({ ...atual, [docId]: lista.colaboradores }));
+            setRevisao((valor) => valor + 1);
+        } catch (e) {
+            setErroASO(e instanceof Error ? e.message : "Erro ao atualizar ASO.");
+        } finally {
+            setOperandoASO(null);
         }
     }
 
@@ -151,10 +183,18 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
                                                             <StatusEtiqueta status={item?.status ?? "NAO_VERIFICADO"} />
                                                         </div>
                                                         {!c.instancia_id && <p className="mt-2 text-sm text-amber-800">ASO ainda não cadastrado para este colaborador.</p>}
+                                                        {podeGerenciarInstancias && Number(doc.ativo) === 1 &&
+                                                            (!c.instancia_id || Number(c.instancia_ativa) !== 1) && (
+                                                                <button type="button" disabled={operandoASO !== null}
+                                                                    onClick={() => void atualizarASO(doc.id, c)}
+                                                                    className="mt-3 rounded-lg bg-[#22365b] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
+                                                                    {operandoASO === c.colaborador_id ? "Aguarde..." : c.instancia_id ? "Reativar ASO" : "Cadastrar ASO"}
+                                                                </button>
+                                                            )}
                                                         {c.instancia_id && Number(c.instancia_ativa) === 1 && Number(doc.ativo) === 1 && (
                                                             <FormularioVerificacao key={c.instancia_id} lojaId={lojaId}
                                                                 vinculoId={doc.id} instanciaId={c.instancia_id}
-                                                                aoConfirmar={() => { setRevisao((valor) => valor + 1); void abrirASO(doc.id); }} />
+                                                                aoConfirmar={() => { setRevisao((valor) => valor + 1); }} />
                                                         )}
                                                         {c.instancia_id && Number(c.instancia_ativa) !== 1 && <p className="mt-2 text-sm text-red-700">ASO individual inativo.</p>}
                                                     </div>;
