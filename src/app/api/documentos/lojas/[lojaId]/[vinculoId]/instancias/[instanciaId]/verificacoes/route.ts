@@ -85,10 +85,15 @@ export async function POST(request: Request, context: Contexto) {
         const cicloInstancia = Number(contextoAtual.ciclo_instancia);
 
         const ultima = await db.execute({
-            sql: `SELECT id FROM documentos_verificacoes
-                  WHERE documento_loja_id = ? AND instancia_id = ?
-                    AND ciclo_documento = ? AND ciclo_instancia = ?
-                  ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1`,
+            sql: `SELECT v.id FROM documentos_verificacoes v
+                  JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                  WHERE v.documento_loja_id = ? AND v.instancia_id = ?
+                    AND v.ciclo_documento = ? AND v.ciclo_instancia = ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM documentos_verificacoes nova
+                        WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                    )
+                  ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1`,
             args: [vinculoId, instanciaId, cicloDocumento, cicloInstancia],
         });
         const ultimaId = ultima.rows.length ? String(ultima.rows[0].id) : null;
@@ -122,11 +127,16 @@ export async function POST(request: Request, context: Contexto) {
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     ))
-                    AND (SELECT id FROM documentos_verificacoes
-                         WHERE documento_loja_id = dl.id AND instancia_id = di.id
-                           AND ciclo_documento = dl.ciclo_atual
-                           AND ciclo_instancia = di.ciclo_atual
-                         ORDER BY data_verificacao DESC, registrado_em DESC, id DESC LIMIT 1) IS ?`,
+                    AND (SELECT v.id FROM documentos_verificacoes v
+                         JOIN documentos_verificacoes raiz ON raiz.id = COALESCE(v.verificacao_raiz_id, v.id)
+                         WHERE v.documento_loja_id = dl.id AND v.instancia_id = di.id
+                           AND v.ciclo_documento = dl.ciclo_atual
+                           AND v.ciclo_instancia = di.ciclo_atual
+                           AND NOT EXISTS (
+                               SELECT 1 FROM documentos_verificacoes nova
+                               WHERE nova.verificacao_raiz_id = raiz.id AND nova.versao > v.versao
+                           )
+                         ORDER BY v.data_verificacao DESC, raiz.registrado_em DESC, raiz.id DESC LIMIT 1) IS ?`,
             args: [id, resultado as string, dataVerificacao, dataPrazo as string | null,
                 observacao || null,
                 contextoAtual.periodicidade === null ? null : Number(contextoAtual.periodicidade),
