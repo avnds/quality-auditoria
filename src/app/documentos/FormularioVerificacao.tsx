@@ -12,8 +12,8 @@ type Dados = {
 const vazio: Dados = { resultado: "", data_verificacao: "", data_prazo: "", observacao: "", prazo_informado_manualmente: false };
 
 export default function FormularioVerificacao({
-    lojaId, vinculoId, aoConfirmar,
-}: { lojaId: string; vinculoId: string; aoConfirmar: () => void }) {
+    lojaId, vinculoId, instanciaId, aoConfirmar,
+}: { lojaId: string; vinculoId: string; instanciaId?: string; aoConfirmar: () => void }) {
     const [dados, setDados] = useState<Dados>(vazio);
     const [vista, setVista] = useState<string | null>(null);
     const [carregando, setCarregando] = useState(true);
@@ -24,7 +24,7 @@ export default function FormularioVerificacao({
     const [editavel, setEditavel] = useState(true);
     const [alterado, setAlterado] = useState(false);
     const seq = useRef(0);
-    const base = `/api/documentos/lojas/${encodeURIComponent(lojaId)}/${encodeURIComponent(vinculoId)}`;
+    const base = `/api/documentos/lojas/${encodeURIComponent(lojaId)}/${encodeURIComponent(vinculoId)}${instanciaId ? `/instancias/${encodeURIComponent(instanciaId)}` : ""}`;
 
     const carregar = useCallback(async () => {
         setCarregando(true);
