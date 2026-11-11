@@ -271,14 +271,49 @@ export async function PATCH(
 
         valores.push(id);
 
-        await db.execute({
+        const atualizarUsuario = {
             sql: `
                 UPDATE usuarios
                 SET ${campos.join(", ")}
                 WHERE id = ?
             `,
             args: valores,
-        });
+        };
+
+        if (perfil !== undefined && perfil !== String(usuarioAlvo.perfil)) {
+            const permissoesDocumentacao = perfil === "SUPERVISORA"
+                ? [
+                    "documentos.visualizar",
+                    "documentos.verificar",
+                    "documentos.corrigir",
+                    "documentos.gerenciar_catalogo",
+                    "documentos.gerenciar_lojas",
+                    "documentos.gerenciar_instancias",
+                ]
+                : ["documentos.visualizar", "documentos.verificar"];
+
+            await db.batch([
+                atualizarUsuario,
+                {
+                    sql: `
+                        DELETE FROM usuario_permissao
+                        WHERE usuario_id = ?
+                          AND permissao_id LIKE 'documentos.%'
+                    `,
+                    args: [id],
+                },
+                {
+                    sql: `
+                        INSERT OR IGNORE INTO usuario_permissao (usuario_id, permissao_id)
+                        SELECT ?, id FROM permissoes
+                        WHERE id IN (${permissoesDocumentacao.map(() => "?").join(",")})
+                    `,
+                    args: [id, ...permissoesDocumentacao],
+                },
+            ], "write");
+        } else {
+            await db.execute(atualizarUsuario);
+        }
 
         const usuarioAtualizadoResult = await db.execute({
             sql: `
