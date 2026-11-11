@@ -136,7 +136,9 @@ export async function PUT(request: Request, context: Contexto) {
                      resultado, data_verificacao, data_prazo, observacao, prazo_informado_manualmente,
                      ultima_verificacao_vista_id, status)
                   VALUES (?, ?, ?, NULL, ?, NULL, ?, ?, ?, ?, ?, ?, 'EM_EDICAO')
-                  ON CONFLICT DO UPDATE SET
+                  ON CONFLICT(usuario_id, documento_loja_id, ciclo_documento)
+                    WHERE instancia_id IS NULL AND status = 'EM_EDICAO'
+                  DO UPDATE SET
                     resultado = excluded.resultado,
                     data_verificacao = excluded.data_verificacao,
                     data_prazo = excluded.data_prazo,
