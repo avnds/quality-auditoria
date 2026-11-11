@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FormularioVerificacao from "./FormularioVerificacao";
+import GerenciarDocumentos from "./GerenciarDocumentos";
 
 type Documento = {
     id: string; nome: string; modalidade: "LOJA" | "COLABORADOR";
     tipo_controle: "VALIDADE" | "REVISAO"; ativo: number;
+    periodicidade_meses: number | null; alerta_dias: number | null;
+    periodicidade_padrao: number | null; alerta_padrao: number;
 };
 type Status = {
     documento_loja_id: string; instancia_id: string | null;
@@ -31,7 +34,7 @@ function StatusEtiqueta({ status }: { status: string }) {
     </span>;
 }
 
-export default function DocumentosLoja({ lojaId, podeGerenciarInstancias }: { lojaId: string; podeGerenciarInstancias: boolean }) {
+export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGerenciarLojas }: { lojaId: string; podeGerenciarInstancias: boolean; podeGerenciarLojas: boolean }) {
     const [documentos, setDocumentos] = useState<Documento[]>([]);
     const [status, setStatus] = useState<Status[]>([]);
     const [resumo, setResumo] = useState<Resumo | null>(null);
@@ -121,6 +124,7 @@ export default function DocumentosLoja({ lojaId, podeGerenciarInstancias }: { lo
 
     return (
         <div className="space-y-6">
+            {podeGerenciarLojas && <GerenciarDocumentos lojaId={lojaId} documentos={documentos} aoAtualizar={() => setRevisao((valor) => valor + 1)} />}
             {resumo && <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">Documentos e ASOs</p><p className="mt-1 text-2xl font-bold text-[#22365b]">{resumo.total}</p></div>
                 <div className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">Verificados</p><p className="mt-1 text-2xl font-bold text-[#22365b]">{resumo.verificados}</p></div>
