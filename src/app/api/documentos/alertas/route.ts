@@ -39,7 +39,7 @@ export async function GET() {
                     JOIN lojas l ON l.id = dl.loja_id
                     JOIN documentos_catalogo dc ON dc.id = dl.documento_id
                     JOIN colaboradores c ON c.loja_id = l.id
-                    LEFT JOIN documentos_instancias di ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id
+                    LEFT JOIN documentos_instancias di ON di.documento_loja_id = dl.id AND di.colaborador_id = c.id AND di.ativo = 1
                     WHERE l.ativo = 1 AND dl.ativo = 1 AND dc.ativo = 1
                       AND (di.id IS NULL OR di.ativo = 1) AND c.ativo = 1 AND dc.modalidade = 'COLABORADOR'
                       AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
