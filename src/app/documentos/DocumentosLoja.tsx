@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import FormularioVerificacao from "./FormularioVerificacao";
 
 type Documento = {
     id: string; nome: string; modalidade: "LOJA" | "COLABORADOR";
@@ -35,6 +36,8 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
     const [resumo, setResumo] = useState<Resumo | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState("");
+    const [aberto, setAberto] = useState<string | null>(null);
+    const [revisao, setRevisao] = useState(0);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -61,7 +64,7 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
         }
         void carregar();
         return () => controller.abort();
-    }, [lojaId]);
+    }, [lojaId, revisao]);
 
     if (carregando) return <div className="rounded-xl bg-white p-8 text-slate-600">Carregando documentos...</div>;
     if (erro) return <div role="alert" className="rounded-xl border border-red-200 bg-white p-6 text-red-700">{erro}</div>;
@@ -95,6 +98,16 @@ export default function DocumentosLoja({ lojaId }: { lojaId: string }) {
                             </div>
                             {doc.modalidade === "LOJA" && loja?.data_prazo && (
                                 <p className="mt-3 text-sm text-slate-600">Prazo: {loja.data_prazo.split("-").reverse().join("/")}</p>
+                            )}
+                            {doc.modalidade === "LOJA" && Number(doc.ativo) === 1 && (
+                                <div className="mt-4">
+                                    <button type="button" onClick={() => setAberto(aberto === doc.id ? null : doc.id)}
+                                        className="rounded-lg border border-[#22365b] px-4 py-2 text-sm font-semibold text-[#22365b]">
+                                        {aberto === doc.id ? "Fechar formulário" : "Registrar verificação"}
+                                    </button>
+                                    {aberto === doc.id && <FormularioVerificacao lojaId={lojaId} vinculoId={doc.id}
+                                        aoConfirmar={() => { setAberto(null); setRevisao((valor) => valor + 1); }} />}
+                                </div>
                             )}
                             {doc.modalidade === "COLABORADOR" && (
                                 <div className="mt-4 space-y-2 border-t pt-3">
