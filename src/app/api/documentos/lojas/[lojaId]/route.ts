@@ -73,7 +73,7 @@ export async function POST(request: Request, context: Contexto) {
         const loja = await db.execute({
             sql: `SELECT l.id FROM lojas l
                   WHERE l.id = ? AND l.ativo = 1
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = l.id AND ul.usuario_id = ?
                     ))
