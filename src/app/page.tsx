@@ -462,7 +462,7 @@ export default async function Home() {
                                         Acesse a área administrativa para consultar as etapas de proteção e restauração do banco de dados.
                                     </p>
                                     <p className="mt-2 text-xs font-medium text-amber-700">
-                                        A restauração ainda não está habilitada nesta etapa.
+                                        A restauração exige perfil MASTER, backup de recuperação salvo e confirmação explícita do banco de destino.
                                     </p>
                                 </div>
                                 <Link
