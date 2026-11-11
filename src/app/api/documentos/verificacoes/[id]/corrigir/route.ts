@@ -61,7 +61,7 @@ export async function POST(request: Request, context: Contexto) {
                   LEFT JOIN documentos_instancias di ON di.id = v.instancia_id
                   LEFT JOIN colaboradores c ON c.id = di.colaborador_id
                   WHERE v.id = ?
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     )) LIMIT 1`,
@@ -122,7 +122,7 @@ export async function POST(request: Request, context: Contexto) {
                         di.ativo = 1 AND c.ativo = 1 AND c.loja_id = dl.loja_id
                         AND di.ciclo_atual = v.ciclo_instancia
                     ))
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     ))
