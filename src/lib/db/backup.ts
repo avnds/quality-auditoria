@@ -1,3 +1,4 @@
+import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 import type { Client, InValue } from "@libsql/client";
 
 type BackupValue =
@@ -117,7 +118,7 @@ export async function createLogicalDatabaseBackup(
             format: "quality-auditoria-logical-backup",
             formatVersion: 1,
             createdAt: new Date().toISOString(),
-            source: process.env.NODE_ENV === "production" ? "production" : "development",
+            source: identificarAmbienteBanco(),
             schema,
             tables,
         };
