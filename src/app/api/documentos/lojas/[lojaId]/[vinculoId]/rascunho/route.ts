@@ -13,7 +13,7 @@ async function contextoDocumento(lojaId: string, vinculoId: string, usuario: { i
               JOIN documentos_catalogo dc ON dc.id = dl.documento_id
               JOIN lojas l ON l.id = dl.loja_id
               WHERE dl.id = ? AND dl.loja_id = ?
-                AND (? = 'MASTER' OR EXISTS (
+                AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                     SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                 )) LIMIT 1`,
         args: [vinculoId, lojaId, usuario.perfil, usuario.id],
