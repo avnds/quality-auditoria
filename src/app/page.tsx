@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import db from "@/lib/db";
+import { GET as consultarAlertasDocumentais } from "@/app/api/documentos/alertas/route";
 
 type AuditoriaResumo = {
     id: string;
@@ -201,6 +202,20 @@ export default async function Home() {
     let totalCorrecao = 0;
     let totalAbertas = 0;
     let alertasTreinamentos: AlertaTreinamento[] = [];
+    let alertasDocumentais: Array<{
+        loja_id: string; loja_nome: string; documento_loja_id: string;
+        documento_nome: string; colaborador_nome: string | null; status: string;
+    }> = [];
+    const podeVerDocumentos = await temPermissao(usuario.id, "documentos.visualizar");
+    if (podeVerDocumentos) {
+        const resposta = await consultarAlertasDocumentais();
+        if (resposta.ok) {
+            const dados = await resposta.json();
+            if (dados.success && Array.isArray(dados.alertas)) {
+                alertasDocumentais = dados.alertas;
+            }
+        }
+    }
 
     if (ehMaster || ehSupervisora) {
         const [clientes, lojas, usuariosAtivos, auditoriasStatus] = await Promise.all([
@@ -459,6 +474,33 @@ export default async function Home() {
                             </div>
                         </section>
                     </>
+                ) : null}
+
+                {podeVerDocumentos ? (
+                    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                        <SecaoTitulo titulo="Alertas de documentação"
+                            descricao="Documentos que exigem atenção nas lojas autorizadas."
+                            href="/documentos" linkTexto="Abrir documentos" />
+                        {alertasDocumentais.length === 0 ? (
+                            <p className="text-sm text-slate-500">Nenhum alerta documental no momento.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {alertasDocumentais.map((item, indice) => (
+                                    <div key={item.documento_loja_id + "-" + indice}
+                                        className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="font-semibold text-[#12223f]">
+                                                {item.documento_nome}{item.colaborador_nome ? " — " + item.colaborador_nome : ""}
+                                            </p>
+                                            <p className="text-sm text-slate-600">{item.loja_nome} · {item.status}</p>
+                                        </div>
+                                        <Link href={"/documentos?lojaId=" + encodeURIComponent(item.loja_id)}
+                                            className="text-sm font-semibold text-[#c22a2e] hover:underline">Ver documento</Link>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 ) : null}
 
                 {ehSupervisora ? (
