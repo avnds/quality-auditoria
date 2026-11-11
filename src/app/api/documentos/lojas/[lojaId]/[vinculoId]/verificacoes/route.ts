@@ -21,7 +21,7 @@ export async function GET(request: Request, context: Contexto) {
                   JOIN documentos_catalogo dc ON dc.id = dl.documento_id
                   WHERE dl.id = ? AND dl.loja_id = ?
                   AND EXISTS (SELECT 1 FROM lojas l WHERE l.id = dl.loja_id)
-                  AND (? = 'MASTER' OR EXISTS (
+                  AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                       SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                   )) LIMIT 1`,
             args: [vinculoId, lojaId, usuario.perfil, usuario.id],
@@ -125,7 +125,7 @@ export async function POST(request: Request, context: Contexto) {
                   JOIN lojas l ON l.id = dl.loja_id
                   WHERE dl.id = ? AND dl.loja_id = ?
                     AND dl.ativo = 1 AND dc.ativo = 1 AND l.ativo = 1
-                    AND (? = 'MASTER' OR EXISTS (
+                    AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                         SELECT 1 FROM usuario_lojas ul
                         WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                     )) LIMIT 1`,
@@ -175,7 +175,7 @@ export async function POST(request: Request, context: Contexto) {
                 WHERE dl.id = ? AND dl.loja_id = ? AND dl.ciclo_atual = ?
                   AND dl.ativo = 1 AND dc.ativo = 1 AND l.ativo = 1
                   AND dc.modalidade = 'LOJA'
-                  AND (? = 'MASTER' OR EXISTS (
+                  AND (? IN ('MASTER', 'SUPERVISORA') OR EXISTS (
                       SELECT 1 FROM usuario_lojas ul WHERE ul.loja_id = dl.loja_id AND ul.usuario_id = ?
                   ))
                   AND (SELECT v.id FROM documentos_verificacoes v
