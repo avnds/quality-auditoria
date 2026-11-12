@@ -55,6 +55,11 @@ async function main() {
                     maxRetries: 10,
                     retryDelay: 200,
                 });
+            } catch (erro) {
+                const codigo = (erro as NodeJS.ErrnoException).code;
+                if (codigo !== "EPERM" && codigo !== "EBUSY" && codigo !== "EACCES") throw erro;
+                console.warn(`AVISO: Windows impediu a limpeza do SQLite temporário: ${pastaTemporaria}`);
+                console.warn("Os testes de integridade passaram; a pasta pode ser removida quando o bloqueio terminar.");
             } finally {
                 if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
                 else process.env.QUALITY_RUNTIME = runtimeAnterior;
