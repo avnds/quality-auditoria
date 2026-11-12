@@ -1,3 +1,4 @@
+import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { del, get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
@@ -190,6 +191,11 @@ export async function GET(
 
         const evidencia =
             evidenciaResult.rows[0];
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            const local = abrirArquivoDesktop("evidencia", evidenciaId);
+            return local ?? NextResponse.json({ success: false, message: "Arquivo offline não encontrado." }, { status: 404 });
+        }
 
         const blob = await get(
             String(
