@@ -5,6 +5,7 @@ import { createLogicalDatabaseBackup } from "@/lib/db/backup";
 import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
 import { prepararManifestoImportacaoDesktop } from "@/lib/desktop/manifesto-importacao";
 import { NOME_TABELA_SESSOES_EXPORTACAO } from "@/lib/desktop/schema-sessoes-exportacao";
+import { NOME_TABELA_MANIFESTOS_EXPORTACAO } from "@/lib/desktop/repositorio-manifestos-exportacao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function GET() {
         // O backup é obtido em uma transação de leitura pela função existente.
         // Não aceita URLs, caminhos, consultas SQL ou identificadores fornecidos pelo cliente.
         const backup = await createLogicalDatabaseBackup(db, {
-            excluirTabelas: [NOME_TABELA_SESSOES_EXPORTACAO],
+            excluirTabelas: [NOME_TABELA_SESSOES_EXPORTACAO, NOME_TABELA_MANIFESTOS_EXPORTACAO],
         });
         const manifesto = prepararManifestoImportacaoDesktop(backup, "producao_direta");
 
