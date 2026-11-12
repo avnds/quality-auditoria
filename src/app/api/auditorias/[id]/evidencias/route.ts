@@ -1,3 +1,4 @@
+import { salvarEvidenciaLocal, removerEvidenciaLocal, substituirEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
 import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { del, get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
@@ -541,6 +542,25 @@ export async function POST(
 
         const ordem = totalEvidencias + 1;
 
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            const evidenciaId = crypto.randomUUID();
+            const uri = await salvarEvidenciaLocal(evidenciaId, arquivo);
+            try {
+                await db.execute({
+                    sql: `INSERT INTO evidencias (id, resposta_id, arquivo_uri, ordem, capturada_em)
+                          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                    args: [evidenciaId, respostaId, uri, ordem],
+                });
+            } catch (erro) {
+                removerEvidenciaLocal(evidenciaId);
+                throw erro;
+            }
+            return NextResponse.json({
+                success: true,
+                evidencia: { id: evidenciaId, respostaId, arquivoUri: uri, ordem, capturadaEm: new Date().toISOString() },
+            });
+        }
+
         const pathname =
             `auditorias/${auditoriaId}/respostas/${respostaId}/${Date.now()}.${extensao}`;
 
@@ -893,6 +913,20 @@ export async function PUT(
                 },
                 { status: 409 }
             );
+        }
+
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            // O arquivo usa o mesmo ID da evidência. A gravação local não consulta Blob.
+            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
+            await db.execute({
+                sql: `UPDATE evidencias SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP WHERE id = ?`,
+                args: [uri, evidenciaId],
+            });
+            return NextResponse.json({
+                success: true,
+                evidencia: { id: evidenciaId, respostaId: String(evidencia.resposta_id), arquivoUri: uri, ordem: Number(evidencia.ordem) },
+            });
         }
 
         const pathname =
