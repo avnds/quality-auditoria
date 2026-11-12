@@ -9,7 +9,7 @@ import type { PlanoTransferencia } from "./plano-transferencia";
 import type { IntegridadeEsperada } from "./conferir-integridade-esperada";
 import { concluirTransferenciaDoPlano } from "./executar-transferencia-plano";
 
-type Referencia = { tipo: "evidencia" | "relatorio"; registroId: string; referenciaSha256: string };
+type Referencia = { tipo: "evidencia" | "relatorio"; registroId: string; referenciaSha256: string; destinoRelativo: string };
 const chave = (tipo: string, id: string) => `${tipo}:${id}`;
 
 /**
