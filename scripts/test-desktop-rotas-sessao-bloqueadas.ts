@@ -1,12 +1,15 @@
 import { strict as assert } from "node:assert";
 import { NextRequest } from "next/server";
-import { POST as criarSessao } from "../src/app/api/desktop/exportacao/sessoes/route";
-import { GET as recuperarSessao } from "../src/app/api/desktop/exportacao/sessoes/[sessaoId]/route";
 
 async function main() {
     const anterior = process.env.QUALITY_DESKTOP_EXPORT_SESSION_ENABLED;
+    const runtimeAnterior = process.env.QUALITY_RUNTIME;
     try {
         delete process.env.QUALITY_DESKTOP_EXPORT_SESSION_ENABLED;
+        process.env.QUALITY_RUNTIME = "desktop";
+        // Importação dinâmica após definir ambiente local: db.ts é inicializado no import.
+        const { POST: criarSessao } = await import("../src/app/api/desktop/exportacao/sessoes/route");
+        const { GET: recuperarSessao } = await import("../src/app/api/desktop/exportacao/sessoes/[sessaoId]/route");
         const criacao = await criarSessao();
         assert.equal(criacao.status, 503);
         assert.equal(criacao.headers.get("cache-control")?.includes("no-store"), true);
@@ -29,6 +32,8 @@ async function main() {
     } finally {
         if (anterior === undefined) delete process.env.QUALITY_DESKTOP_EXPORT_SESSION_ENABLED;
         else process.env.QUALITY_DESKTOP_EXPORT_SESSION_ENABLED = anterior;
+        if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
+        else process.env.QUALITY_RUNTIME = runtimeAnterior;
     }
 }
 main().catch(erro => { console.error(erro); process.exitCode = 1; });
