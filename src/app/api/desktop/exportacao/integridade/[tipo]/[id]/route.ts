@@ -60,6 +60,10 @@ export async function GET(request: Request, context: Context) {
             return NextResponse.json({ success: false, message: "Arquivo privado indisponível." }, { status: 404, headers });
         }
 
+        if (!blob.stream) {
+            return NextResponse.json({ success: false, message: "Conteúdo do arquivo privado indisponível." }, { status: 404, headers });
+        }
+
         const integridade = await calcularIntegridadeStream(blob.stream);
         if (integridade.tamanhoBytes <= 0 || integridade.tamanhoBytes !== blob.blob.size) {
             return NextResponse.json({ success: false, message: "Tamanho do Blob inconsistente." }, { status: 409, headers });
