@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { LogicalDatabaseBackup } from "../db/backup";
 import { inventariarArquivosBlob } from "./inventario-blob";
 
@@ -6,6 +7,7 @@ export type InventarioPublicoDesktop = {
         tipo: "evidencia" | "relatorio";
         registroId: string;
         destinoRelativo: string;
+        referenciaSha256: string;
     }>;
     totalEvidencias: number;
     totalRelatorios: number;
@@ -52,10 +54,11 @@ export function prepararManifestoImportacaoDesktop(
         origem: backup.source,
         criadoEm: backup.createdAt,
         inventario: {
-            arquivos: inventario.arquivos.map(({ tipo, registroId, destinoRelativo }) => ({
+            arquivos: inventario.arquivos.map(({ tipo, registroId, destinoRelativo, urlOriginal }) => ({
                 tipo,
                 registroId,
                 destinoRelativo,
+                referenciaSha256: createHash("sha256").update(urlOriginal, "utf8").digest("hex"),
             })),
             totalEvidencias: inventario.totalEvidencias,
             totalRelatorios: inventario.totalRelatorios,
