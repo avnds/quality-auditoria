@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createClient } from "@libsql/client";
 import { identificarAmbienteBanco } from "../src/lib/db/identificar-ambiente";
+import { obterUrlBancoDesktop } from "../src/lib/desktop/storage";
 
 async function main() {
     const dir = mkdtempSync(join(tmpdir(), "quality-desktop-test-"));
@@ -25,16 +26,21 @@ async function main() {
             throw new Error("O ambiente local não foi identificado corretamente.");
         }
 
-        // Testar a configuração real de conexão do aplicativo.
-        const module = await import("../src/lib/db");
-        db = module.default;
+        // O aplicativo usará o caminho permanente, nunca a URL TURSO de teste.
+        if (obterUrlBancoDesktop() === process.env.TURSO_DATABASE_URL) {
+            throw new Error("O teste não está isolado do armazenamento permanente.");
+        }
+
+        // Exercitar SQLite com um arquivo temporário sem tocar no banco permanente.
+        db = createClient({ url: pathToFileURL(file).href });
         const result = await db.execute("SELECT 1 AS ok");
         if (Number(result.rows[0]?.ok) !== 1) {
             throw new Error("O SQLite não respondeu corretamente.");
         }
 
         console.log("OK: ambiente production_offline identificado.");
-        console.log("OK: conexão SQLite local funcionando.");
+        console.log("OK: conexão SQLite temporária funcionando.");
+        console.log("OK: caminho permanente do Desktop configurado separadamente.");
         console.log("OK: nenhum banco Turso foi acessado.");
     } finally {
         if (db) await db.close();
