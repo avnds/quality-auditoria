@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -12,10 +13,11 @@ const headers = { "Cache-Control": "private, no-store, max-age=0", "X-Content-Ty
 
 /**
  * Download somente leitura, por identificador interno.
- * Ainda não constitui uma transferência vinculada a snapshot:
- * a importação offline NÃO deve ser ativada com base nesta rota isolada.
+ * Confere a referência persistida com o hash fornecido pelo manifesto.
+ * Isso detecta troca de URI, mas NÃO comprova integridade dos bytes do Blob
+ * nem constitui uma sessão de snapshot imutável. A ativação permanece bloqueada.
  */
-export async function GET(_request: Request, context: Context) {
+export async function GET(request: Request, context: Context) {
     try {
         if (identificarAmbienteBanco() !== "production") {
             return NextResponse.json({ success: false, message: "Exportação disponível apenas na produção online." }, { status: 403, headers });
@@ -34,6 +36,11 @@ export async function GET(_request: Request, context: Context) {
             return NextResponse.json({ success: false, message: "Identificador de arquivo inválido." }, { status: 400, headers });
         }
 
+        const referenciaSha256 = new URL(request.url).searchParams.get("referenciaSha256");
+        if (!referenciaSha256 || !/^[a-f0-9]{64}$/.test(referenciaSha256)) {
+            return NextResponse.json({ success: false, message: "Referência do snapshot obrigatória." }, { status: 400, headers });
+        }
+
         const tabela = tipo === "evidencia" ? "evidencias" : "relatorios";
         // Tabela é escolhida exclusivamente entre dois nomes constantes.
         // O identificador do cliente é sempre um parâmetro SQL.
@@ -46,6 +53,11 @@ export async function GET(_request: Request, context: Context) {
         }
 
         const uri = String(result.rows[0].arquivo_uri);
+        const hashAtual = createHash("sha256").update(uri, "utf8").digest();
+        const hashEsperado = Buffer.from(referenciaSha256, "hex");
+        if (!timingSafeEqual(hashAtual, hashEsperado)) {
+            return NextResponse.json({ success: false, message: "Arquivo alterado desde a geração do snapshot. Reinicie a exportação." }, { status: 409, headers });
+        }
         // Somente referências persistidas no banco são usadas.
         // Nenhum URL, caminho ou token é aceito como entrada do cliente.
         const arquivo = await get(uri, { access: "private" });
