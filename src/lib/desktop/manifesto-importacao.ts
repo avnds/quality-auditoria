@@ -1,5 +1,15 @@
 import type { LogicalDatabaseBackup } from "../db/backup";
-import { inventariarArquivosBlob, type InventarioBlob } from "./inventario-blob";
+import { inventariarArquivosBlob } from "./inventario-blob";
+
+export type InventarioPublicoDesktop = {
+    arquivos: Array<{
+        tipo: "evidencia" | "relatorio";
+        registroId: string;
+        destinoRelativo: string;
+    }>;
+    totalEvidencias: number;
+    totalRelatorios: number;
+};
 import { validarOrigemBackupParaDesktop } from "./politica-importacao";
 
 export type ManifestoImportacaoDesktop = {
@@ -8,7 +18,7 @@ export type ManifestoImportacaoDesktop = {
     modalidade: "producao_direta" | "pacote_backup";
     origem: "production" | "production_offline";
     criadoEm: string;
-    inventario: InventarioBlob;
+    inventario: InventarioPublicoDesktop;
     totalArquivos: number;
 };
 
@@ -41,7 +51,15 @@ export function prepararManifestoImportacaoDesktop(
         modalidade,
         origem: backup.source,
         criadoEm: backup.createdAt,
-        inventario,
+        inventario: {
+            arquivos: inventario.arquivos.map(({ tipo, registroId, destinoRelativo }) => ({
+                tipo,
+                registroId,
+                destinoRelativo,
+            })),
+            totalEvidencias: inventario.totalEvidencias,
+            totalRelatorios: inventario.totalRelatorios,
+        },
         totalArquivos: inventario.arquivos.length,
     };
 }
