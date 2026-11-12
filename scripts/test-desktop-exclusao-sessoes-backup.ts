@@ -1,5 +1,8 @@
 import { strict as assert } from "node:assert";
 import { createClient } from "@libsql/client";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createLogicalDatabaseBackup } from "../src/lib/db/backup";
 import { NOME_TABELA_SESSOES_EXPORTACAO } from "../src/lib/desktop/schema-sessoes-exportacao";
 
@@ -8,7 +11,8 @@ async function main() {
     // continua sendo SQLite em memória, sem conexão remota.
     const runtimeAnterior = process.env.QUALITY_RUNTIME;
     process.env.QUALITY_RUNTIME = "desktop";
-    const db = createClient({ url: "file::memory:" });
+    const pastaTemporaria = mkdtempSync(join(tmpdir(), "quality-backup-teste-"));
+    const db = createClient({ url: `file:${join(pastaTemporaria, "teste.sqlite")}` });
     try {
         await db.execute("CREATE TABLE clientes_teste (id TEXT PRIMARY KEY, nome TEXT NOT NULL)");
         await db.execute("CREATE INDEX idx_clientes_teste_nome ON clientes_teste(nome)");
@@ -34,17 +38,15 @@ async function main() {
         assert.equal(desktop.schema.some((item) => item.name === "idx_clientes_teste_nome"), true);
         console.log("OK: dados e índice das demais tabelas preservados.");
 
-        const objetos = await db.execute("SELECT name, type FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY name");
-        console.log("DIAGNOSTICO objetos antes:", objetos.rows.map(r => String(r.type) + ":" + String(r.name)).join(", "));
         const tradicional = await createLogicalDatabaseBackup(db);
-        console.log("DIAGNOSTICO tabelas exportadas:", tradicional.tables.map(t => t.name).join(", "));
         assert.equal(tradicional.tables.some((t) => t.name === NOME_TABELA_SESSOES_EXPORTACAO), true);
         assert.equal(tradicional.schema.some((item) => item.name === "idx_sessoes_teste_usuario"), true);
         console.log("OK: backup tradicional sem exclusão permanece inalterado.");
 
-        console.log("OK: teste em SQLite temporário, sem Turso ou Vercel Blob.");
+        console.log("OK: teste em arquivo SQLite temporário, sem Turso ou Vercel Blob.");
     } finally {
         db.close();
+        rmSync(pastaTemporaria, { recursive: true, force: true });
         if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
         else process.env.QUALITY_RUNTIME = runtimeAnterior;
     }
