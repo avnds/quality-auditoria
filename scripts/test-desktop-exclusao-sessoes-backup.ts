@@ -4,6 +4,10 @@ import { createLogicalDatabaseBackup } from "../src/lib/db/backup";
 import { NOME_TABELA_SESSOES_EXPORTACAO } from "../src/lib/desktop/schema-sessoes-exportacao";
 
 async function main() {
+    // Apenas identifica a origem no metadado do backup; o cliente fornecido
+    // continua sendo SQLite em memória, sem conexão remota.
+    const runtimeAnterior = process.env.QUALITY_RUNTIME;
+    process.env.QUALITY_RUNTIME = "desktop";
     const db = createClient({ url: "file::memory:" });
     try {
         await db.execute("CREATE TABLE clientes_teste (id TEXT PRIMARY KEY, nome TEXT NOT NULL)");
@@ -38,6 +42,8 @@ async function main() {
         console.log("OK: teste em SQLite temporário, sem Turso ou Vercel Blob.");
     } finally {
         db.close();
+        if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
+        else process.env.QUALITY_RUNTIME = runtimeAnterior;
     }
 }
 
