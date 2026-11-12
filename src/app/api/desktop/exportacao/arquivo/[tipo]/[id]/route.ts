@@ -1,9 +1,9 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import db from "@/lib/db";
 import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
+import { conferirReferenciaSnapshot } from "@/lib/desktop/conferir-referencia-snapshot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,9 +53,7 @@ export async function GET(request: Request, context: Context) {
         }
 
         const uri = String(result.rows[0].arquivo_uri);
-        const hashAtual = createHash("sha256").update(uri, "utf8").digest();
-        const hashEsperado = Buffer.from(referenciaSha256, "hex");
-        if (!timingSafeEqual(hashAtual, hashEsperado)) {
+        if (!conferirReferenciaSnapshot(uri, referenciaSha256)) {
             return NextResponse.json({ success: false, message: "Arquivo alterado desde a geração do snapshot. Reinicie a exportação." }, { status: 409, headers });
         }
         // Somente referências persistidas no banco são usadas.
