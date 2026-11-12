@@ -65,6 +65,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                         <p className="mt-2 text-sm">A restauração local ainda não foi implementada. O fluxo de restauração DEV/PRODUÇÃO permanece indisponível neste ambiente.</p>
                     </section>
                 ) : (
+                <>
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
                     <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco {producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ({producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}). Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
@@ -112,6 +113,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                         <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado. Sessões podem ser encerradas porque os dados de usuários e sessões também são substituídos.</li>
                     </ul>
                 </section>
+                </>
                 )}
             </div>
         </main>
