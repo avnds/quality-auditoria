@@ -31,11 +31,11 @@ export function validarReferenciaBlobPrivado(valor: string): URL {
     // O host específico do store privado deve ser confirmado na configuração
     // do Cloud antes de habilitar downloads. Não confiar apenas no sufixo
     // blob.vercel-storage.com: backups podem conter URLs arbitrárias.
-    if (!/^[a-z0-9-]+\\.private\\.blob\\.vercel-storage\\.com$/i.test(url.hostname)) {
+    if (!/^[a-z0-9-]+\.private\.blob\.vercel-storage\.com$/i.test(url.hostname)) {
         throw new Error("Referência fora do padrão de host privado do Vercel Blob.");
     }
 
-    if (url.pathname === "/" || /[\\\\%]/.test(url.pathname)) {
+    if (url.pathname === "/" || /[\\%]/.test(url.pathname)) {
         throw new Error("Caminho Blob inválido ou ambíguo.");
     }
 
