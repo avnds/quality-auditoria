@@ -10,7 +10,7 @@ export type RegistroCopiaRecuperacao = {
     arquivos: { caminho: string; tamanhoBytes: number; sha256: string }[];
 };
 
-const caminhos = ["database", "evidencias", "instalacao.json"] as const;
+const caminhos = ["database", "arquivos", "evidencias", "instalacao.json"] as const;
 const dentro = (raiz: string, alvo: string) => {
     const rel = relative(raiz, alvo);
     return rel !== "" && rel !== ".." && !rel.startsWith(".." + sep) && !rel.startsWith("/") && !rel.startsWith("\\");
