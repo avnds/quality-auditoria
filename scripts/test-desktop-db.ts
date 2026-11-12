@@ -37,12 +37,19 @@ async function main() {
         console.log("OK: conexão SQLite local funcionando.");
         console.log("OK: nenhum banco Turso foi acessado.");
     } finally {
-        db?.close();
+        if (db) await db.close();
         if (previousRuntime === undefined) delete process.env.QUALITY_RUNTIME;
         else process.env.QUALITY_RUNTIME = previousRuntime;
         if (previousUrl === undefined) delete process.env.TURSO_DATABASE_URL;
         else process.env.TURSO_DATABASE_URL = previousUrl;
-        rmSync(dir, { recursive: true, force: true });
+        // O Windows pode manter handles do SQLite por alguns instantes.
+        // Falha de limpeza não invalida o teste de conexão.
+        try {
+            rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        } catch (error) {
+            console.warn("Aviso: pasta temporária não removida automaticamente:", dir);
+            console.warn(error);
+        }
     }
 }
 
