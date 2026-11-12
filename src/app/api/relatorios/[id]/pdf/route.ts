@@ -1,3 +1,4 @@
+import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { NextResponse } from "next/server";
 import { get } from "@vercel/blob";
 
@@ -64,6 +65,7 @@ export async function GET(
         const result = await db.execute({
             sql: `
                 SELECT
+                    r.id,
                     r.arquivo_uri,
                     r.gerado_em,
                     l.nome AS loja_nome
@@ -100,6 +102,11 @@ export async function GET(
 
         const registro = result.rows[0];
         const arquivoUri = String(registro.arquivo_uri);
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            const local = abrirArquivoDesktop("relatorio", String(registro.id));
+            return local ?? NextResponse.json({ success: false, message: "PDF offline não encontrado." }, { status: 404 });
+        }
 
         const arquivo = await get(arquivoUri, {
             access: "private",
