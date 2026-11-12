@@ -8,7 +8,7 @@ import { NOME_TABELA_SESSOES_EXPORTACAO } from "../src/lib/desktop/schema-sessoe
 
 async function main() {
     // Apenas identifica a origem no metadado do backup; o cliente fornecido
-    // continua sendo SQLite em memória, sem conexão remota.
+    // continua sendo SQLite temporário local, sem conexão remota.
     const runtimeAnterior = process.env.QUALITY_RUNTIME;
     process.env.QUALITY_RUNTIME = "desktop";
     const pastaTemporaria = mkdtempSync(join(tmpdir(), "quality-backup-teste-"));
@@ -45,10 +45,21 @@ async function main() {
 
         console.log("OK: teste em arquivo SQLite temporário, sem Turso ou Vercel Blob.");
     } finally {
-        db.close();
-        rmSync(pastaTemporaria, { recursive: true, force: true });
-        if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
-        else process.env.QUALITY_RUNTIME = runtimeAnterior;
+        try {
+            await db.close();
+        } finally {
+            try {
+                rmSync(pastaTemporaria, {
+                    recursive: true,
+                    force: true,
+                    maxRetries: 10,
+                    retryDelay: 200,
+                });
+            } finally {
+                if (runtimeAnterior === undefined) delete process.env.QUALITY_RUNTIME;
+                else process.env.QUALITY_RUNTIME = runtimeAnterior;
+            }
+        }
     }
 }
 
