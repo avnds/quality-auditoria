@@ -20,7 +20,7 @@ export type LogicalDatabaseBackup = {
     format: "quality-auditoria-logical-backup";
     formatVersion: 1;
     createdAt: string;
-    source: "development" | "production";
+    source: "development" | "production" | "production_offline";
     schema: Array<{
         type: string;
         name: string;
