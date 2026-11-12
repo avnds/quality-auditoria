@@ -34,7 +34,10 @@ async function main() {
         assert.equal(desktop.schema.some((item) => item.name === "idx_clientes_teste_nome"), true);
         console.log("OK: dados e índice das demais tabelas preservados.");
 
+        const objetos = await db.execute("SELECT name, type FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY name");
+        console.log("DIAGNOSTICO objetos antes:", objetos.rows.map(r => String(r.type) + ":" + String(r.name)).join(", "));
         const tradicional = await createLogicalDatabaseBackup(db);
+        console.log("DIAGNOSTICO tabelas exportadas:", tradicional.tables.map(t => t.name).join(", "));
         assert.equal(tradicional.tables.some((t) => t.name === NOME_TABELA_SESSOES_EXPORTACAO), true);
         assert.equal(tradicional.schema.some((item) => item.name === "idx_sessoes_teste_usuario"), true);
         console.log("OK: backup tradicional sem exclusão permanece inalterado.");
