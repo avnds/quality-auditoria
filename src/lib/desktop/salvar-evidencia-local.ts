@@ -30,3 +30,18 @@ export function removerEvidenciaLocal(id: string): void {
     const caminho = caminhoEvidenciaLocal(id);
     if (existsSync(caminho)) rmSync(caminho, { force: true });
 }
+
+/** Substitui os bytes de uma evidência existente sem alterar seu ID. */
+export async function substituirEvidenciaLocal(id: string, arquivo: File): Promise<string> {
+    const destino = caminhoEvidenciaLocal(id);
+    const pasta = join(obterCaminhosDesktop().root, "arquivos", "evidencias");
+    mkdirSync(pasta, { recursive: true });
+    const temporario = join(pasta, randomUUID() + ".part");
+    try {
+        writeFileSync(temporario, Buffer.from(await arquivo.arrayBuffer()), { flag: "wx", mode: 0o600 });
+        renameSync(temporario, destino);
+        return `desktop:evidencia:${id}`;
+    } finally {
+        if (existsSync(temporario)) rmSync(temporario, { force: true });
+    }
+}
