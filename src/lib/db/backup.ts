@@ -60,7 +60,8 @@ function encodeValue(value: unknown): BackupValue {
  * Não executa comandos de escrita no banco de origem.
  */
 export async function createLogicalDatabaseBackup(
-    db: Client
+    db: Client,
+    opcoes: { excluirTabelas?: readonly string[] } = {}
 ): Promise<LogicalDatabaseBackup> {
     const transaction = await db.transaction("read");
 
@@ -83,12 +84,15 @@ export async function createLogicalDatabaseBackup(
             `,
         });
 
+        const tabelasExcluidas = new Set(opcoes.excluirTabelas ?? []);
         const schema = schemaResult.rows.map((row) => ({
             type: String(row.type),
             name: String(row.name),
             tableName: String(row.tableName),
             sql: String(row.sql),
-        }));
+        })).filter((item) =>
+            !tabelasExcluidas.has(item.name) && !tabelasExcluidas.has(item.tableName)
+        );
 
         const tableDefinitions = schema.filter(
             (entry) => entry.type === "table"
