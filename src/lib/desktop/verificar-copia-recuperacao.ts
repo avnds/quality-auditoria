@@ -54,7 +54,7 @@ export async function verificarCopiaRecuperacaoDesktop(pastaCopia: string): Prom
         const vistos = new Set<string>();
         for (const item of registro.arquivos) {
             if (!item || typeof item.caminho !== "string" ||
-                !/^(database|evidencias)\/[a-zA-Z0-9_./-]+$|^instalacao\.json$/.test(item.caminho) ||
+                !/^(database|evidencias|arquivos)\/[a-zA-Z0-9_./-]+$|^instalacao\.json$/.test(item.caminho) ||
                 item.caminho.split("/").some(p => p === "." || p === ".." || p === "") ||
                 vistos.has(item.caminho) || !Number.isSafeInteger(item.tamanhoBytes) ||
                 item.tamanhoBytes < 0 || !/^[0-9a-f]{64}$/.test(item.sha256)) {
