@@ -23,12 +23,13 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
         );
     }
 
-    let ambienteBanco: "development" | "production" | "unknown" = "unknown";
+    let ambienteBanco: "development" | "production" | "production_offline" | "unknown" = "unknown";
     try {
         ambienteBanco = identificarAmbienteBanco();
     } catch {
         // Não oferecer restauração quando a conexão não é reconhecida.
     }
+    const offline = ambienteBanco === "production_offline";
     const producao = ambienteBanco === "production";
     const confirmacao = producao ? "RESTAURAR PRODUCAO" : "RESTAURAR DEV";
 
@@ -58,6 +59,12 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                     <p className="mt-3 text-xs leading-5 text-slate-500">O backup é gerado a partir do banco realmente conectado, inclusive em ambientes Preview. Confirme o destino indicado na seção de restauração. O arquivo contém dados sensíveis; armazene-o com segurança. Arquivos externos, como evidências no Vercel Blob, não são incluídos.</p>
                 </section>
 
+                {offline ? (
+                    <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5">
+                        <h2 className="text-xl font-bold">PRODUÇÃO OFFLINE</h2>
+                        <p className="mt-2 text-sm">A restauração local ainda não foi implementada. O fluxo de restauração DEV/PRODUÇÃO permanece indisponível neste ambiente.</p>
+                    </section>
+                ) : (
                 <section className="mb-6 rounded-2xl border border-red-300 bg-white p-5 shadow-sm sm:p-6">
                     <h2 className="text-xl font-bold text-[#c22a2e]">Restaurar backup no banco {producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-700">A operação substitui a estrutura e os dados atuais do banco conectado ({producao ? "PRODUÇÃO" : ambienteBanco === "development" ? "DEV" : "não identificado"}). Use somente o arquivo de backup desejado e confirme que o backup de recuperação atual foi salvo fora do projeto.</p>
@@ -105,6 +112,7 @@ export default async function BackupRestauracaoPage({ searchParams }: PageProps)
                         <li>Depois da operação, valide login, auditorias, checklists e relatórios no ambiente restaurado. Sessões podem ser encerradas porque os dados de usuários e sessões também são substituídos.</li>
                     </ul>
                 </section>
+                )}
             </div>
         </main>
     );
