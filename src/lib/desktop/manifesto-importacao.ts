@@ -31,6 +31,9 @@ export function prepararManifestoImportacaoDesktop(
     if (!Number.isFinite(Date.parse(backup.createdAt))) {
         throw new Error("Data de criação do backup inválida.");
     }
+    if (backup.source !== "production" && backup.source !== "production_offline") {
+        throw new Error("Origem do backup não permitida para o Desktop.");
+    }
     const inventario = inventariarArquivosBlob(backup);
     return {
         formato: "quality-desktop-import-manifest",
