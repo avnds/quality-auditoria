@@ -48,6 +48,10 @@ async function iniciar() {
   if (!instalacaoPronta()) {
     janela = new BrowserWindow({ width: 760, height: 720, resizable: false,
       webPreferences: { preload: path.join(__dirname, "preload.cjs"), nodeIntegration: false, contextIsolation: true, sandbox: true } });
+    janela.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    janela.webContents.on("will-navigate", (evento, destino) => {
+      if (!destino.startsWith("file://")) evento.preventDefault();
+    });
     await janela.loadFile(path.join(__dirname, "setup.html"));
     return;
   }
