@@ -8,6 +8,36 @@ const { once } = require("node:events");
 let servidor;
 let janela;
 let instalando = false;
+let origemVinculada = null;
+const protocolo = "qualitydesktop";
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient(protocolo, process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient(protocolo);
+}
+function receberVinculo(valor) {
+  try {
+    const link = new URL(valor);
+    if (link.protocol !== protocolo + ":" || link.hostname !== "setup") return;
+    const origem = new URL(link.searchParams.get("origin") || "");
+    if (origem.username || origem.password || origem.search || origem.hash ||
+        (origem.pathname !== "/" && origem.pathname !== "") ||
+        (origem.protocol !== "https:" &&
+         !(origem.protocol === "http:" && ["localhost", "127.0.0.1"].includes(origem.hostname)))) return;
+    origemVinculada = origem.origin;
+    if (janela && !janela.isDestroyed()) janela.webContents.send("quality:origin", origemVinculada);
+  } catch {}
+}
+app.on("open-url", (evento, url) => { evento.preventDefault(); receberVinculo(url); });
+app.on("second-instance", (_evento, args) => {
+  const link = args.find(item => item.startsWith(protocolo + "://"));
+  if (link) receberVinculo(link);
+  if (janela && !janela.isDestroyed()) janela.focus();
+});
+const instanciaUnica = app.requestSingleInstanceLock();
+if (!instanciaUnica) app.quit();
+const linkInicial = process.argv.find(item => item.startsWith(protocolo + "://"));
+if (linkInicial) receberVinculo(linkInicial);
 const raizDados = () => path.join(process.env.LOCALAPPDATA || app.getPath("userData"), "QualityDesktop");
 const instalacaoPronta = () => {
   const raiz = raizDados();
@@ -53,6 +83,7 @@ async function iniciar() {
       if (!destino.startsWith("file://")) evento.preventDefault();
     });
     await janela.loadFile(path.join(__dirname, "setup.html"));
+    if (origemVinculada) janela.webContents.send("quality:origin", origemVinculada);
     return;
   }
   const porta = await portaLivre();
@@ -88,6 +119,7 @@ ipcMain.handle("quality:install", async (evento, entrada) => {
       typeof entrada.senha !== "string" || entrada.senha.length > 1024) {
     return { ok: false, mensagem: "Dados de instalação inválidos." };
   }
+  if (origemVinculada && new URL(entrada.origem).origin !== origemVinculada) return { ok: false, mensagem: "Origem diferente do Quality online que iniciou a instalação." };
   instalando = true;
   const entradaRunner = path.join(pastaApp(), "instalar-desktop.cjs");
   try {
