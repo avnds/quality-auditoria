@@ -108,6 +108,7 @@ async function executar() {
     };
     mkdirSync(caminhos.root, { recursive: true });
     const area = criarAreaImportacaoDesktop(caminhos.root);
+    let concluida = false;
     try {
         console.log("Restaurando banco e transferindo arquivos para área temporária...");
         const resultado = await prepararImportacaoCompletaStaging(area, backup, fonte);
@@ -115,9 +116,18 @@ async function executar() {
         await ativarPrimeiraInstalacaoDesktop(caminhos.root, area, resultado.manifesto,
             resultado.plano, resultado.integridades);
         if (!verificarInstalacaoDesktop().pronta) throw new Error("Instalação não foi confirmada.");
+        concluida = true;
         console.log("Instalação offline concluída. Origem: " + backup.source);
     } finally {
-        descartarAreaImportacaoDesktop(caminhos.root, area);
+        if (concluida) {
+            try {
+                descartarAreaImportacaoDesktop(caminhos.root, area);
+            } catch {
+                console.warn("Instalação concluída; limpeza temporária pendente. Nenhum dado ativo foi removido.");
+            }
+        } else {
+            console.warn("Falha antes da conclusão: área temporária preservada para diagnóstico. Nenhum dado ativo foi apagado pela limpeza.");
+        }
     }
 }
 
