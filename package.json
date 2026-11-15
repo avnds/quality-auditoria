@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "tsx -r dotenv/config src/lib/db/migrate.ts"
+    "db:migrate": "tsx -r dotenv/config src/lib/db/migrate.ts",
+    "build:desktop": "cross-env QUALITY_DESKTOP_PACKAGE=1 next build && node scripts/preparar-pacote-desktop.cjs",
+    "desktop:dist": "npm run build:desktop && electron-builder --win nsis"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
@@ -29,6 +31,39 @@
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "cross-env": "^7.0.3"
+  },
+  "main": "desktop/main.cjs",
+  "build": {
+    "appId": "br.com.qualityconsultorias.desktop",
+    "productName": "Quality Desktop",
+    "directories": {
+      "output": "dist-desktop/instaladores"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-desktop/quality-server",
+        "to": "quality-server"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "asar": true
   }
 }
