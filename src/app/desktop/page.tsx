@@ -30,7 +30,7 @@ export default async function DesktopPage() {
                 <p className="font-semibold">Ambiente de origem: {ambiente === "development" ? "Desenvolvimento (DEV)" : "Produção"}</p>
                 <p className="mt-2 text-sm text-slate-600">
                     A exportação exige sua sessão autenticada e não modifica o banco de origem.
-                    O aplicativo Windows só será disponibilizado aqui após a geração e validação do instalador.
+                    No DEV local, o botão baixa o instalador gerado neste computador. Em produção, o download depende da publicação do executável em armazenamento de distribuição.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                     <a href="/api/desktop/exportacao/disponibilidade"
@@ -38,9 +38,7 @@ export default async function DesktopPage() {
                         Verificar disponibilidade
                     </a>
                     {vinculo && <a href={vinculo} className="rounded-lg border border-[#22365b] px-5 py-3 font-semibold text-[#22365b]">Conectar aplicativo instalado</a>}
-                    <span aria-disabled="true" className="cursor-not-allowed rounded-lg bg-slate-200 px-5 py-3 font-semibold text-slate-500">
-                        Instalar Quality Desktop — aguardando instalador
-                    </span>
+                    <a href="/api/desktop/instalador" className="rounded-lg bg-[#c22a2e] px-5 py-3 font-semibold text-white">Baixar instalador Windows (.exe)</a>
                 </div>
             </div>
         </main>
