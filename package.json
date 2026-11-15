@@ -34,7 +34,8 @@
     "typescript": "^5",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.25.0"
   },
   "main": "desktop/main.cjs",
   "build": {
@@ -45,6 +46,8 @@
     },
     "files": [
       "desktop/main.cjs",
+      "desktop/preload.cjs",
+      "desktop/setup.html",
       "package.json"
     ],
     "extraResources": [
