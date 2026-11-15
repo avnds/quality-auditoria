@@ -73,9 +73,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "perMachine": false,
-      "selectPerMachine": false
+      "createStartMenuShortcut": true
     },
     "asar": true
   }
