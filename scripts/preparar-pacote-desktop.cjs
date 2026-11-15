@@ -13,4 +13,15 @@ const staticDir = path.join(raiz, ".next", "static");
 fs.cpSync(staticDir, path.join(destino, ".next", "static"), { recursive: true });
 const publicDir = path.join(raiz, "public");
 if (fs.existsSync(publicDir)) fs.cpSync(publicDir, path.join(destino, "public"), { recursive: true });
+const esbuild = require("esbuild");
+esbuild.buildSync({
+  entryPoints: [path.join(raiz, "scripts", "instalar-desktop-primeira-vez.ts")],
+  outfile: path.join(destino, "instalar-desktop.cjs"),
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  packages: "external",
+  logLevel: "warning",
+});
 console.log("Pacote do servidor preparado em dist-desktop/quality-server");
