@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { identificarAmbienteBanco } from "@/lib/db/identificar-ambiente";
@@ -10,6 +11,12 @@ export default async function DesktopPage() {
     if (!usuario) redirect("/login");
     if (usuario.perfil !== "MASTER" && usuario.perfil !== "SUPERVISORA") redirect("/");
     const ambiente = identificarAmbienteBanco();
+    const cabecalhos = await headers();
+    const host = cabecalhos.get("host") ?? "";
+    const origem = host === "localhost:3000" || host === "127.0.0.1:3000"
+        ? `http://${host}`
+        : host === "quality-auditoria.vercel.app" ? `https://${host}` : null;
+    const vinculo = origem ? `qualitydesktop://setup?origin=${encodeURIComponent(origem)}` : null;
     if (ambiente === "production_offline") redirect("/");
     return (
         <main className="mx-auto max-w-3xl px-6 py-12 text-[#22365b]">
@@ -30,6 +37,7 @@ export default async function DesktopPage() {
                         className="rounded-lg bg-[#22365b] px-5 py-3 font-semibold text-white">
                         Verificar disponibilidade
                     </a>
+                    {vinculo && <a href={vinculo} className="rounded-lg border border-[#22365b] px-5 py-3 font-semibold text-[#22365b]">Conectar aplicativo instalado</a>}
                     <span aria-disabled="true" className="cursor-not-allowed rounded-lg bg-slate-200 px-5 py-3 font-semibold text-slate-500">
                         Instalar Quality Desktop — aguardando instalador
                     </span>
