@@ -21,8 +21,8 @@ const headers = {
  */
 export async function GET(request: Request, context: Context) {
     try {
-        if (identificarAmbienteBanco() !== "production") {
-            return NextResponse.json({ success: false, message: "Disponível apenas na produção online." }, { status: 403, headers });
+        if (identificarAmbienteBanco() === "production_offline") {
+            return NextResponse.json({ success: false, message: "Disponível apenas nos ambientes Cloud." }, { status: 403, headers });
         }
         const usuario = await getCurrentUser();
         if (!usuario) {
