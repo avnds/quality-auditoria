@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.8.0",
+    "@vercel/blob": "^2.9.0",
     "dotenv": "^17.4.2",
-    "next": "16.3.4",
+    "next": "^16.4.6",
     "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -27,15 +27,15 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.25.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5",
-    "electron": "^33.4.11",
-    "electron-builder": "^25.1.8",
-    "cross-env": "^7.0.3",
-    "esbuild": "^0.25.0"
+    "typescript": "^5"
   },
   "main": "desktop/main.cjs",
   "build": {
@@ -76,5 +76,8 @@
       "createStartMenuShortcut": true
     },
     "asar": true
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }
