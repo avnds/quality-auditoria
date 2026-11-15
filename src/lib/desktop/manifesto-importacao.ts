@@ -18,7 +18,7 @@ export type ManifestoImportacaoDesktop = {
     formato: "quality-desktop-import-manifest";
     versao: 1;
     modalidade: "producao_direta" | "pacote_backup";
-    origem: "production" | "production_offline";
+    origem: "development" | "production" | "production_offline";
     criadoEm: string;
     inventario: InventarioPublicoDesktop;
     totalArquivos: number;
@@ -37,13 +37,10 @@ export function prepararManifestoImportacaoDesktop(
     if (modalidade !== "producao_direta" && modalidade !== "pacote_backup") {
         throw new Error("Modalidade de importação inválida.");
     }
-    if (modalidade === "producao_direta" && backup.source !== "production") {
-        throw new Error("Importação direta exige origem de produção online.");
-    }
     if (!Number.isFinite(Date.parse(backup.createdAt))) {
         throw new Error("Data de criação do backup inválida.");
     }
-    if (backup.source !== "production" && backup.source !== "production_offline") {
+    if (backup.source !== "development" && backup.source !== "production" && backup.source !== "production_offline") {
         throw new Error("Origem do backup não permitida para o Desktop.");
     }
     const inventario = inventariarArquivosBlob(backup);
