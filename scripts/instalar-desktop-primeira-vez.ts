@@ -50,8 +50,8 @@ async function executar() {
         existsSync(join(caminhos.root, "arquivos"))) {
         throw new Error("Instalação existente ou incompleta. Não será substituída.");
     }
-    const controlador = new AbortController();
     const transporte = async (caminho: string, init: RequestInit = {}) => {
+        const controlador = new AbortController();
         const timeout = setTimeout(() => controlador.abort(), 120_000);
         try {
             const resposta = await fetch(new URL(caminho, origem), {
