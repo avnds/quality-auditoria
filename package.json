@@ -40,7 +40,14 @@
   "main": "desktop/main.cjs",
   "build": {
     "appId": "br.com.qualityconsultorias.desktop",
-    "protocols": [{"name":"Quality Desktop","schemes":["qualitydesktop"]}],
+    "protocols": [
+      {
+        "name": "Quality Desktop",
+        "schemes": [
+          "qualitydesktop"
+        ]
+      }
+    ],
     "productName": "Quality Desktop",
     "directories": {
       "output": "dist-desktop/instaladores"
@@ -66,7 +73,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "perMachine": false,
+      "selectPerMachine": false
     },
     "asar": true
   }
