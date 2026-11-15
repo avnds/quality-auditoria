@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const ambiente = identificarAmbienteBanco();
-        if (ambiente !== "production") {
+        if (ambiente === "production_offline") {
             return NextResponse.json(
-                { success: false, message: "Importação direta disponível apenas no Quality Cloud de produção." },
+                { success: false, message: "Importação direta disponível apenas nos ambientes Cloud." },
                 { status: 403, headers: { "Cache-Control": "no-store" } }
             );
         }
@@ -36,7 +36,7 @@ export async function GET() {
         }
 
         return NextResponse.json(
-            { success: true, origem: "production", modalidade: "producao_direta", transferenciaHabilitada: false },
+            { success: true, origem: ambiente, modalidade: "producao_direta", transferenciaHabilitada: false },
             { headers: { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } }
         );
     } catch (error) {
