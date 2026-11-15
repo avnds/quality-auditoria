@@ -1,11 +1,23 @@
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const { spawn } = require("node:child_process");
 const net = require("node:net");
 const path = require("node:path");
 const fs = require("node:fs");
+const { once } = require("node:events");
 
 let servidor;
 let janela;
+let instalando = false;
+const raizDados = () => path.join(process.env.LOCALAPPDATA || app.getPath("userData"), "QualityDesktop");
+const instalacaoPronta = () => {
+  const raiz = raizDados();
+  try {
+    const marcador = JSON.parse(fs.readFileSync(path.join(raiz, "instalacao.json"), "utf8"));
+    return marcador.format === "quality-desktop-installation" && marcador.version === 1 &&
+      !Number.isNaN(Date.parse(marcador.importedAt)) &&
+      fs.statSync(path.join(raiz, "database", "quality.sqlite")).size > 0;
+  } catch { return false; }
+};
 const pastaApp = () => path.join(process.resourcesPath, "quality-server");
 function portaLivre() {
   return new Promise((resolve, reject) => {
@@ -33,6 +45,12 @@ async function iniciar() {
   const raiz = pastaApp();
   const entrada = path.join(raiz, "server.js");
   if (!fs.existsSync(entrada)) throw new Error("Pacote do servidor não encontrado.");
+  if (!instalacaoPronta()) {
+    janela = new BrowserWindow({ width: 760, height: 720, resizable: false,
+      webPreferences: { preload: path.join(__dirname, "preload.cjs"), nodeIntegration: false, contextIsolation: true, sandbox: true } });
+    await janela.loadFile(path.join(__dirname, "setup.html"));
+    return;
+  }
   const porta = await portaLivre();
   const url = `http://127.0.0.1:${porta}`;
   servidor = spawn(process.execPath, [entrada], {
@@ -59,6 +77,48 @@ async function iniciar() {
   });
   await janela.loadURL(url);
 }
+ipcMain.handle("quality:install", async (evento, entrada) => {
+  if (instalando || instalacaoPronta()) return { ok: false, mensagem: "Instalação já iniciada ou concluída." };
+  if (!janela || evento.sender !== janela.webContents) return { ok: false, mensagem: "Origem da solicitação inválida." };
+  if (!entrada || typeof entrada.origem !== "string" || typeof entrada.email !== "string" ||
+      typeof entrada.senha !== "string" || entrada.senha.length > 1024) {
+    return { ok: false, mensagem: "Dados de instalação inválidos." };
+  }
+  instalando = true;
+  const entradaRunner = path.join(pastaApp(), "instalar-desktop.cjs");
+  try {
+    if (!fs.existsSync(entradaRunner)) throw new Error("Executor de importação não encontrado.");
+    const processo = spawn(process.execPath, [entradaRunner], {
+      cwd: pastaApp(), windowsHide: true,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", QUALITY_RUNTIME: "desktop" },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const dados = JSON.stringify(entrada);
+    entrada.senha = "";
+    processo.stdin.end(dados);
+    let saida = "";
+    let erros = "";
+    processo.stdout.setEncoding("utf8");
+    processo.stderr.setEncoding("utf8");
+    processo.stdout.on("data", trecho => { saida += trecho; if (saida.length > 12000) saida = saida.slice(-12000); });
+    processo.stderr.on("data", trecho => { erros += trecho; if (erros.length > 12000) erros = erros.slice(-12000); });
+    const [codigo] = await once(processo, "close");
+    if (codigo !== 0) throw new Error(erros.slice(-1200) || "Importação falhou.");
+    if (!instalacaoPronta()) throw new Error("Importação não ativou o banco local.");
+    janela.webContents.send("quality:install-done");
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, mensagem: erro instanceof Error ? erro.message : "Falha inesperada." };
+  } finally {
+    instalando = false;
+  }
+});
+ipcMain.handle("quality:restart", () => {
+  if (!instalacaoPronta()) return false;
+  app.relaunch();
+  app.quit();
+  return true;
+});
 app.whenReady().then(() => iniciar().catch(async erro => {
   await dialog.showMessageBox({ type: "error", title: "Quality Desktop", message: erro.message });
   app.quit();
