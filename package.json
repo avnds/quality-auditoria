@@ -40,6 +40,7 @@
   "main": "desktop/main.cjs",
   "build": {
     "appId": "br.com.qualityconsultorias.desktop",
+    "protocols": [{"name":"Quality Desktop","schemes":["qualitydesktop"]}],
     "productName": "Quality Desktop",
     "directories": {
       "output": "dist-desktop/instaladores"
