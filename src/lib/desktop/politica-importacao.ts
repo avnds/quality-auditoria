@@ -35,12 +35,12 @@ export function autorizarInicioImportacaoDesktop(
     }
 }
 
-/** Backup lógico importado da produção deve ter origem identificada. */
+/** Backup lógico deve ter origem identificada entre os ambientes conhecidos. */
 export function validarOrigemBackupParaDesktop(backup: LogicalDatabaseBackup): void {
     if (backup.format !== "quality-auditoria-logical-backup" || backup.formatVersion !== 1) {
         throw new Error("Formato de backup incompatível.");
     }
-    if (backup.source !== "production" && backup.source !== "production_offline") {
+    if (backup.source !== "development" && backup.source !== "production" && backup.source !== "production_offline") {
         throw new Error("Backup não pertence a uma origem de produção permitida.");
     }
 }
