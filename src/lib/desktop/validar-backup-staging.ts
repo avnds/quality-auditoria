@@ -11,10 +11,10 @@ export function validarBackupParaStaging(
     if (!valor || typeof valor !== "object") throw new Error("Backup ausente.");
     const b = valor as Partial<LogicalDatabaseBackup>;
     if (b.format !== "quality-auditoria-logical-backup" ||
-        b.formatVersion !== 1 || b.source !== "production" ||
+        b.formatVersion !== 1 || (b.source !== "development" && b.source !== "production" && b.source !== "production_offline") ||
         !Array.isArray(b.schema) || !Array.isArray(b.tables) ||
         b.tables.length === 0 || b.tables.length > 200 || b.schema.length > 2000) {
-        throw new Error("Backup de produção incompatível.");
+        throw new Error("Backup de ambiente incompatível.");
     }
     const tabelas = new Map<string, string>();
     const nomes = new Set<string>();
