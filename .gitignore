@@ -45,3 +45,5 @@ next-env.d.ts
 /limpar-blobs-teste.mjs
 /limpar-todos-blobs.cjs
 /testar-blob.cjs
+# Windows desktop build artifacts
+/dist-desktop/
