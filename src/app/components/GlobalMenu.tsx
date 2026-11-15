@@ -69,6 +69,11 @@ const itensMenu: ItemMenu[] = [
         permissao: "setores.visualizar",
     },
     {
+        nome: "Quality Desktop",
+        href: "/desktop",
+        perfisPermitidos: ["MASTER", "SUPERVISORA"],
+    },
+    {
         nome: "Usuários",
         href: "/usuarios",
         permissao: "usuarios.visualizar",

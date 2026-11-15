@@ -1,3 +1,5 @@
+import { salvarEvidenciaLocal, removerEvidenciaLocal, substituirEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
+import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { del, get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
@@ -190,6 +192,11 @@ export async function GET(
 
         const evidencia =
             evidenciaResult.rows[0];
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            const local = abrirArquivoDesktop("evidencia", evidenciaId);
+            return local ?? NextResponse.json({ success: false, message: "Arquivo offline não encontrado." }, { status: 404 });
+        }
 
         const blob = await get(
             String(
@@ -534,6 +541,25 @@ export async function POST(
         }
 
         const ordem = totalEvidencias + 1;
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            const evidenciaId = crypto.randomUUID();
+            const uri = await salvarEvidenciaLocal(evidenciaId, arquivo);
+            try {
+                await db.execute({
+                    sql: `INSERT INTO evidencias (id, resposta_id, arquivo_uri, ordem, capturada_em)
+                          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                    args: [evidenciaId, respostaId, uri, ordem],
+                });
+            } catch (erro) {
+                removerEvidenciaLocal(evidenciaId);
+                throw erro;
+            }
+            return NextResponse.json({
+                success: true,
+                evidencia: { id: evidenciaId, respostaId, arquivoUri: uri, ordem, capturadaEm: new Date().toISOString() },
+            });
+        }
 
         const pathname =
             `auditorias/${auditoriaId}/respostas/${respostaId}/${Date.now()}.${extensao}`;
@@ -887,6 +913,20 @@ export async function PUT(
                 },
                 { status: 409 }
             );
+        }
+
+
+        if (process.env.QUALITY_RUNTIME === "desktop") {
+            // O arquivo usa o mesmo ID da evidência. A gravação local não consulta Blob.
+            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
+            await db.execute({
+                sql: `UPDATE evidencias SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP WHERE id = ?`,
+                args: [uri, evidenciaId],
+            });
+            return NextResponse.json({
+                success: true,
+                evidencia: { id: evidenciaId, respostaId: String(evidencia.resposta_id), arquivoUri: uri, ordem: Number(evidencia.ordem) },
+            });
         }
 
         const pathname =

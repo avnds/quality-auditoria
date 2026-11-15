@@ -96,11 +96,16 @@ function validateBackup(value: unknown): BackupFile {
 
 export async function POST(request: Request) {
     // A restrição deve considerar o banco real, não o ambiente da aplicação.
-    let ambienteBanco: "development" | "production";
+    let ambienteBanco: "development" | "production" | "production_offline";
     try {
         ambienteBanco = identificarAmbienteBanco();
     } catch {
         return fail("Não foi possível identificar o banco conectado. Restauração bloqueada.", 403);
+    }
+    // A restauração local terá uma autorização própria, sem token Turso.
+    // Até sua implementação, bloquear o destino offline explicitamente.
+    if (ambienteBanco === "production_offline") {
+        return fail("Restauração offline ainda não habilitada.", 403);
     }
     const usuario = await getCurrentUser();
     if (!usuario) return fail("Usuário não autenticado.", 401);

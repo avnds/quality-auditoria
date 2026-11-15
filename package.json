@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "tsx -r dotenv/config src/lib/db/migrate.ts"
+    "db:migrate": "tsx -r dotenv/config src/lib/db/migrate.ts",
+    "build:desktop": "cross-env QUALITY_DESKTOP_PACKAGE=1 next build && node scripts/preparar-pacote-desktop.cjs",
+    "desktop:dist": "npm run build:desktop && electron-builder --win nsis"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.8.0",
+    "@vercel/blob": "^2.9.0",
     "dotenv": "^17.4.2",
-    "next": "16.3.4",
+    "next": "^16.4.6",
     "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -25,10 +27,57 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.25.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"
+  },
+  "main": "desktop/main.cjs",
+  "build": {
+    "appId": "br.com.qualityconsultorias.desktop",
+    "protocols": [
+      {
+        "name": "Quality Desktop",
+        "schemes": [
+          "qualitydesktop"
+        ]
+      }
+    ],
+    "productName": "Quality Desktop",
+    "directories": {
+      "output": "dist-desktop/instaladores"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "desktop/preload.cjs",
+      "desktop/setup.html",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-desktop/quality-server",
+        "to": "quality-server"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "asar": true
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }
