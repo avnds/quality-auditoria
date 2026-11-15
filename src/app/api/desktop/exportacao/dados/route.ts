@@ -18,9 +18,9 @@ const noStore = {
 
 export async function GET() {
     try {
-        if (identificarAmbienteBanco() !== "production") {
+        if (identificarAmbienteBanco() === "production_offline") {
             return NextResponse.json(
-                { success: false, message: "Exportação direta disponível apenas na produção online." },
+                { success: false, message: "Exportação direta disponível apenas nos ambientes Cloud." },
                 { status: 403, headers: noStore }
             );
         }
