@@ -75,7 +75,7 @@ async function executar() {
     if (!["MASTER", "SUPERVISORA"].includes(usuario.usuario?.perfil ?? "")) {
         throw new Error("Somente MASTER ou SUPERVISORA podem instalar.");
     }
-    const cookie = login.headers.get("set-cookie")?.match(/(?:^|,\\s*)quality_session=([^;]+)/)?.[1];
+    const cookie = login.headers.get("set-cookie")?.match(/quality_session=([^;]+)/)?.[1];
     if (!cookie) throw new Error("Sessão de autenticação não recebida.");
     const autenticado = (caminho: string) => transporte(caminho, {
         headers: { Cookie: "quality_session=" + cookie },
