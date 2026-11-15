@@ -25,6 +25,7 @@ button:disabled{opacity:.55;cursor:wait}#estado{white-space:pre-wrap;margin-top:
 </main><script>
 const form=document.getElementById("form"), estado=document.getElementById("estado");
 const botao=document.getElementById("instalar");
+window.qualitySetup.aoReceberOrigem(origem=>{const campo=document.getElementById("origem");campo.value=origem;campo.readOnly=true;estado.textContent="Origem identificada automaticamente pelo Quality online.";});
 form.addEventListener("submit",async e=>{
  e.preventDefault();botao.disabled=true;estado.textContent="Autenticando e importando dados. Aguarde...";
  const dados={origem:document.getElementById("origem").value,email:document.getElementById("email").value,senha:document.getElementById("senha").value};
