@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar Quality Desktop</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;background:#f4f6fa;color:#22365b;margin:0;padding:40px}
+main{background:white;max-width:620px;margin:auto;padding:36px;border-radius:16px;box-shadow:0 8px 32px #22365b18}
+h1{margin-top:0}p{line-height:1.55;color:#45536b}label{display:block;margin:20px 0 6px;font-weight:600}
+input{width:100%;padding:12px;border:1px solid #aab3c1;border-radius:8px;font:inherit}
+button{margin-top:24px;padding:13px 20px;border:0;border-radius:8px;background:#22365b;color:white;font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}#estado{white-space:pre-wrap;margin-top:20px;color:#45536b}#reiniciar{display:none}
+</style></head><body><main>
+<h1>Quality Desktop</h1>
+<p>Primeira instalação. Conecte-se ao Quality online para importar os dados do ambiente de origem. Depois da conclusão, o aplicativo funcionará offline.</p>
+<form id="form">
+<label for="origem">Endereço do Quality online</label>
+<input id="origem" type="url" placeholder="https://quality-auditoria.vercel.app" required>
+<label for="email">E-mail MASTER ou SUPERVISORA</label>
+<input id="email" type="email" autocomplete="username" required>
+<label for="senha">Senha</label>
+<input id="senha" type="password" autocomplete="current-password" required>
+<button id="instalar" type="submit">Importar dados e ativar</button>
+</form>
+<button id="reiniciar" type="button">Abrir Quality Desktop</button>
+<p id="estado" role="status" aria-live="polite"></p>
+</main><script>
+const form=document.getElementById("form"), estado=document.getElementById("estado");
+const botao=document.getElementById("instalar");
+form.addEventListener("submit",async e=>{
+ e.preventDefault();botao.disabled=true;estado.textContent="Autenticando e importando dados. Aguarde...";
+ const dados={origem:document.getElementById("origem").value,email:document.getElementById("email").value,senha:document.getElementById("senha").value};
+ document.getElementById("senha").value="";
+ try{
+   const resultado=await window.qualitySetup.instalar(dados);dados.senha="";
+   if(!resultado.ok)throw new Error(resultado.mensagem);
+   estado.textContent="Importação concluída. O Quality Desktop está pronto para abrir.";
+   form.style.display="none";document.getElementById("reiniciar").style.display="inline-block";
+ }catch(erro){estado.textContent=erro.message||"Falha na importação.";botao.disabled=false;}
+});
+document.getElementById("reiniciar").addEventListener("click",()=>window.qualitySetup.reiniciar());
+</script></body></html>
