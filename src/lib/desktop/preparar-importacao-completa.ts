@@ -30,7 +30,7 @@ export async function prepararImportacaoCompletaStaging(
     integridades: IntegridadeEsperada[];
 }> {
     validarBackupParaStaging(backup);
-    const manifesto = prepararManifestoImportacaoDesktop(backup, "producao_direta");
+    const manifesto = prepararManifestoImportacaoDesktop(backup, backup.source === "production_offline" ? "pacote_backup" : "producao_direta");
     const inventario = inventariarArquivosBlob(backup);
     const plano = criarPlanoTransferencia(inventario);
     const integridades: IntegridadeEsperada[] = [];
