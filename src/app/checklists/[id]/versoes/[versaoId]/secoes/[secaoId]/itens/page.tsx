@@ -5,6 +5,7 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovoItemButton from "./NovoItemButton";
+import AdicionarItensCatalogoButton from "./AdicionarItensCatalogoButton";
 import EditarItemButton from "./EditarItemButton";
 import ExcluirItemButton from "./ExcluirItemButton";
 
@@ -76,13 +77,16 @@ export default async function ItensPage({
                 orientacao,
                 ordem,
                 ativo,
-                item_vencimento
+                item_vencimento,
+                catalogo_item_id
             FROM checklist_itens
             WHERE checklist_secao_id = ?
             ORDER BY ordem ASC
         `,
         args: [secaoId],
     });
+
+    const idsExistentes = itensResult.rows.map(row => row.catalogo_item_id == null ? "" : String(row.catalogo_item_id)).filter(Boolean);
 
     const itens = itensResult.rows.map((row) => ({
         id: String(row.id),
@@ -181,6 +185,7 @@ export default async function ItensPage({
 
                         {podeGerenciar &&
                             Number(secao.checklist_ativo) === 1 && (
+                                <AdicionarItensCatalogoButton checklistId={id} versaoId={versaoId} secaoId={secaoId} catalogoItens={catalogoItens} idsExistentes={idsExistentes} />
                                 <NovoItemButton
                                     checklistId={id}
                                     versaoId={versaoId}
