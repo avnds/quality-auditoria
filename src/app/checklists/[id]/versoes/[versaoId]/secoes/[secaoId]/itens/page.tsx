@@ -185,6 +185,7 @@ export default async function ItensPage({
 
                         {podeGerenciar &&
                             Number(secao.checklist_ativo) === 1 && (
+                                <div className="flex flex-wrap gap-2">
                                 <AdicionarItensCatalogoButton checklistId={id} versaoId={versaoId} secaoId={secaoId} catalogoItens={catalogoItens} idsExistentes={idsExistentes} />
                                 <NovoItemButton
                                     checklistId={id}
@@ -192,6 +193,7 @@ export default async function ItensPage({
                                     secaoId={secaoId}
                                     catalogoItens={catalogoItens}
                                 />
+                                </div>
                             )}
                     </div>
                 </div>
