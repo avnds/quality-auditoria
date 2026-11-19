@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovaVersaoButton from "./NovaVersaoButton";
+import EditarVersaoButton from "./EditarVersaoButton";
 import AlterarPublicacaoVersaoButton from "./AlterarPublicacaoVersaoButton";
 
 type VersoesPageProps = {
@@ -183,6 +184,8 @@ export default async function VersoesPage({
 
                                     </div>
 
+                                    <div className="flex flex-wrap items-center gap-2">
+                                    {podeGerenciar && !versao.publicada && Number(checklist.ativo) === 1 && <EditarVersaoButton checklistId={id} versaoId={versao.id} numero={versao.numero} descricao={versao.descricao} />}
                                     <Link
                                         href={`/checklists/${id}/versoes/${versao.id}/secoes`}
                                         className="rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold text-[#22365b] transition hover:bg-slate-50"
@@ -195,6 +198,7 @@ export default async function VersoesPage({
                                         publicada={Boolean(versao.publicada)}
                                         podeGerenciar={podeGerenciar}
                                     />
+                                    </div>
                                 </div>
                             ))}
                         </div>
