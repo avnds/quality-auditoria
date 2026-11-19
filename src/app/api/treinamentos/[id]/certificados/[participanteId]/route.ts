@@ -219,22 +219,26 @@ export async function POST(
             console.warn("Não foi possível incorporar public/moldura.png no certificado:", error);
         }
 
-        // Logotipo maior no topo esquerdo.
+        // Logotipo e identificação centralizados acima do título, conforme modelo aprovado.
         try {
             const logoBytes = await readFile(path.join(process.cwd(), "public", "icone1.png"));
             const logo = await pdf.embedPng(logoBytes);
-            const escala = Math.min(132 / logo.width, 66 / logo.height);
-            // Alinha o centro vertical do logotipo ao centro da medalha.
+            const escala = Math.min(86 / logo.width, 86 / logo.height);
+            const logoLargura = logo.width * escala;
             const logoAltura = logo.height * escala;
-            pagina.drawImage(logo, { x: 62, y: 405, width: logo.width * escala, height: logoAltura });
-            // Identificação centralizada horizontalmente abaixo do logotipo.
-            centralizar("Quality", 382, 11, negrito, azul, 95, 155);
-            centralizar("Consultorias em Alimentos", 370, 8, negrito, azul, 95, 155);
+            pagina.drawImage(logo, {
+                x: 421 - logoLargura / 2,
+                y: 455,
+                width: logoLargura,
+                height: logoAltura,
+            });
+            centralizar("Quality", 442, 13, negrito, azul, 421, 250);
+            centralizar("Consultorias em Alimentos", 429, 11, negrito, azul, 421, 300);
         } catch (error) {
             console.warn("Não foi possível incorporar o logotipo no certificado:", error);
-            textoLimitado("QUALITY CONSULTORIA EM ALIMENTOS", 62, 518, 300, 15, negrito, azul);
+            centralizar("Quality", 442, 13, negrito, azul, 421, 250);
+            centralizar("Consultorias em Alimentos", 429, 11, negrito, azul, 421, 300);
         }
-
 
         // Medalha PNG transparente enviada para public/Medalha.png.
         try {
