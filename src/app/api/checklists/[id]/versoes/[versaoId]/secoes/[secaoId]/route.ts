@@ -161,3 +161,17 @@ export async function DELETE(
         );
     }
 }
+export async function PUT(request: NextRequest,{params}:RouteContext){try{
+ const {id,versaoId,secaoId}=await params;
+ const p=await requirePermission("checklists.editar");
+ if(!p.autorizado||!["MASTER","SUPERVISORA"].includes(p.usuario.perfil))return NextResponse.json({message:"Sem permissão."},{status:403});
+ const atual=await db.execute({sql:`SELECT cs.id,cv.publicada,c.ativo FROM checklist_secoes cs JOIN checklist_versoes cv ON cv.id=cs.checklist_versao_id JOIN checklists c ON c.id=cv.checklist_id WHERE cs.id=? AND cv.id=? AND c.id=? LIMIT 1`,args:[secaoId,versaoId,id]});
+ if(!atual.rows.length)return NextResponse.json({message:"Seção não encontrada."},{status:404});
+ if(Number(atual.rows[0].publicada)===1)return NextResponse.json({message:"Não é permitido editar seções de versões publicadas. Crie uma nova versão."},{status:409});
+ if(Number(atual.rows[0].ativo)!==1)return NextResponse.json({message:"Checklist inativo."},{status:409});
+ const body=await request.json();const nome=typeof body.nome==="string"?body.nome.trim():"";const descricao=typeof body.descricao==="string"?body.descricao.trim():"";
+ if(!nome||nome.length>200||descricao.length>500)return NextResponse.json({message:"Nome obrigatório (até 200 caracteres) e descrição até 500 caracteres."},{status:400});
+ const r=await db.execute({sql:"UPDATE checklist_secoes SET nome=?,descricao=? WHERE id=? AND checklist_versao_id=?",args:[nome,descricao||null,secaoId,versaoId]});
+ if(r.rowsAffected!==1)return NextResponse.json({message:"Seção não encontrada."},{status:404});
+ return NextResponse.json({success:true,message:"Seção atualizada."});
+ }catch(e){console.error("Erro ao editar seção",e);return NextResponse.json({message:"Não foi possível editar a seção."},{status:500});}}
