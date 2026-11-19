@@ -63,7 +63,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
     const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
     const [treinamentos, setTreinamentos] = useState<Treinamento[]>([]);
     const [selecionados, setSelecionados] = useState<string[]>([]);
-    const [titulo, setTitulo] = useState("Treinamento de Boas Práticas");
+    const [titulo, setTitulo] = useState("Treinamento de BPF");
     const [dataRealizacao, setDataRealizacao] = useState(() => {
         const hoje = new Date();
         const ano = hoje.getFullYear();
@@ -73,7 +73,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
     });
     const [cargaHoraria, setCargaHoraria] = useState("4");
     const [validadeMeses, setValidadeMeses] = useState("12");
-    const [conteudoProgramatico, setConteudoProgramatico] = useState("");
+    const [conteudoProgramatico, setConteudoProgramatico] = useState("Boas Práticas de Fabricação e Manipulação");
     const [ministrante, setMinistrante] = useState("");
     const [carregando, setCarregando] = useState(true);
     const [salvando, setSalvando] = useState(false);
