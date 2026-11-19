@@ -34,7 +34,7 @@ function StatusEtiqueta({ status }: { status: string }) {
     </span>;
 }
 
-export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGerenciarLojas }: { lojaId: string; podeGerenciarInstancias: boolean; podeGerenciarLojas: boolean }) {
+export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGerenciarLojas, podeGerenciarCatalogo }: { lojaId: string; podeGerenciarInstancias: boolean; podeGerenciarLojas: boolean; podeGerenciarCatalogo: boolean }) {
     const [documentos, setDocumentos] = useState<Documento[]>([]);
     const [status, setStatus] = useState<Status[]>([]);
     const [resumo, setResumo] = useState<Resumo | null>(null);
@@ -127,7 +127,7 @@ export default function DocumentosLoja({ lojaId, podeGerenciarInstancias, podeGe
     return (
         <div className="space-y-6">
             {erro && <p role="alert" className="rounded-lg border border-red-200 bg-white p-3 text-sm text-red-700">{erro}</p>}
-            {podeGerenciarLojas && <GerenciarDocumentos lojaId={lojaId} documentos={documentos} aoAtualizar={() => setRevisao((valor) => valor + 1)} />}
+            {podeGerenciarLojas && <GerenciarDocumentos lojaId={lojaId} documentos={documentos} podeGerenciarCatalogo={podeGerenciarCatalogo} aoAtualizar={() => setRevisao((valor) => valor + 1)} />}
             {resumo && <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">Documentos e ASOs</p><p className="mt-1 text-2xl font-bold text-[#22365b]">{resumo.total}</p></div>
                 <div className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">Verificados</p><p className="mt-1 text-2xl font-bold text-[#22365b]">{resumo.verificados}</p></div>
