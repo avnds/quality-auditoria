@@ -72,16 +72,16 @@ export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }:
     return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-bold text-[#22365b]">Gerenciar documentos da loja</h2>
         <p className="mt-1 text-sm text-slate-500">Vincule documentos e ajuste os prazos de acompanhamento. O histórico é preservado.</p>
-        <div className="mt-4 rounded-xl border p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-slate-800">
             <h3 className="font-semibold text-[#22365b]">Vincular vários documentos</h3>
-            <input type="search" placeholder="Buscar documentos..." aria-label="Buscar documentos" value={busca} onChange={(e) => setBusca(e.target.value)} className="mt-3 w-full rounded-lg border p-2 text-sm" />
-            <div className="mt-3 flex flex-wrap gap-4 text-sm">
+            <input type="search" placeholder="Buscar documentos..." aria-label="Buscar documentos" value={busca} onChange={(e) => setBusca(e.target.value)} className="mt-3 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 placeholder:text-slate-500" />
+            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-700">
                 <button type="button" disabled={ocupado} onClick={() => setSelecionados((atual) => [...new Set([...atual, ...filtrados.map((item) => item.id)])])} className="font-semibold text-[#22365b]">Selecionar resultados</button>
                 <button type="button" disabled={ocupado} onClick={() => setSelecionados([])} className="font-semibold text-slate-600">Limpar</button>
                 <span>{selecionados.length} selecionado(s)</span>
             </div>
             <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
-                {filtrados.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-slate-50">
+                {filtrados.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white p-2 text-sm font-medium text-slate-900 hover:bg-slate-100">
                     <input type="checkbox" checked={selecionados.includes(item.id)} disabled={ocupado} onChange={(e) => setSelecionados((atual) => e.target.checked ? [...atual, item.id] : atual.filter((id) => id !== item.id))} />
                     {item.nome}
                 </label>)}
@@ -90,14 +90,14 @@ export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }:
             <button type="button" disabled={ocupado || !selecionados.length} onClick={() => void vincularLote()} className="mt-3 rounded-lg bg-[#22365b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{ocupado ? "Vinculando..." : "Vincular selecionados"}</button>
         </div>
         <div className="mt-5 space-y-2">
-            {documentos.map((doc) => <div key={doc.id} className="rounded-lg border border-slate-200 p-3">
+            {documentos.map((doc) => <div key={doc.id} className="rounded-lg border border-slate-200 bg-white p-3 text-slate-800">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div><p className="font-semibold text-slate-800">{doc.nome}</p>
                         <p className="text-xs text-slate-500">{Number(doc.ativo) === 1 ? "Ativo" : "Inativo"} • Periodicidade: {doc.periodicidade_meses ?? doc.periodicidade_padrao ?? "não definida"} meses • Alerta: {doc.alerta_dias ?? doc.alerta_padrao} dias</p>
                     </div>
                     <div className="flex gap-2">
                         <button type="button" disabled={ocupado} onClick={() => editando === doc.id ? setEditando(null) : editar(doc)}
-                            className="rounded-lg border px-3 py-2 text-xs font-semibold">Configurar</button>
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-[#22365b]">Configurar</button>
                         <button type="button" disabled={ocupado} onClick={() => {
                             if (Number(doc.ativo) === 1) {
                                 const justificativa = window.prompt(`Justificativa para inativar ${doc.nome}:`);
@@ -113,10 +113,10 @@ export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }:
                 </div>
                 {editando === doc.id && <div className="mt-3 flex flex-wrap items-end gap-3 border-t pt-3">
                     <label className="text-xs text-slate-700">Periodicidade (meses)
-                        <input type="number" min="1" max="1200" value={periodicidade} onChange={(e) => setPeriodicidade(e.target.value)} placeholder="Padrão" className="mt-1 block w-40 rounded-lg border p-2" />
+                        <input type="number" min="1" max="1200" value={periodicidade} onChange={(e) => setPeriodicidade(e.target.value)} placeholder="Padrão" className="mt-1 block w-40 rounded-lg border border-slate-300 bg-white p-2 text-slate-900" />
                     </label>
                     <label className="text-xs text-slate-700">Alerta (dias)
-                        <input type="number" min="0" max="3650" value={alerta} onChange={(e) => setAlerta(e.target.value)} placeholder="Padrão" className="mt-1 block w-40 rounded-lg border p-2" />
+                        <input type="number" min="0" max="3650" value={alerta} onChange={(e) => setAlerta(e.target.value)} placeholder="Padrão" className="mt-1 block w-40 rounded-lg border border-slate-300 bg-white p-2 text-slate-900" />
                     </label>
                     <button type="button" disabled={ocupado} onClick={() => void enviar(`${base}/${encodeURIComponent(doc.id)}`, "PATCH", {
                         periodicidade_meses: numeroOpcional(periodicidade), alerta_dias: numeroOpcional(alerta),
