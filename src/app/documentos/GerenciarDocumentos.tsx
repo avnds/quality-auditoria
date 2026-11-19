@@ -9,7 +9,8 @@ function numeroOpcional(valor: string) { return valor.trim() ? Number(valor) : n
 
 export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }: Props) {
     const [catalogo, setCatalogo] = useState<Catalogo[]>([]);
-    const [novo, setNovo] = useState("");
+    const [selecionados, setSelecionados] = useState<string[]>([]);
+    const [busca, setBusca] = useState("");
     const [editando, setEditando] = useState<string | null>(null);
     const [periodicidade, setPeriodicidade] = useState("");
     const [alerta, setAlerta] = useState("");
@@ -53,18 +54,40 @@ export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }:
     const disponiveis = catalogo.filter((item) => Number(item.ativo) === 1 &&
         !documentos.some((doc) => doc.nome === item.nome));
 
+    const filtrados = disponiveis.filter((item) => item.nome.toLowerCase().includes(busca.toLowerCase()));
+    async function vincularLote() {
+        if (!selecionados.length || ocupado) return;
+        setOcupado(true); setErro(""); setMensagem("");
+        try {
+            const resposta = await fetch(base + "/lote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documento_ids: selecionados }) });
+            const json = await resposta.json();
+            if (!resposta.ok || !json.success) throw new Error(json.message ?? "Erro ao vincular.");
+            setMensagem(json.quantidade + " documento(s) vinculado(s).");
+            setSelecionados([]);
+            aoAtualizar();
+        } catch (e) { setErro(e instanceof Error ? e.message : "Erro ao vincular."); }
+        finally { setOcupado(false); }
+    }
+
     return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-bold text-[#22365b]">Gerenciar documentos da loja</h2>
         <p className="mt-1 text-sm text-slate-500">Vincule documentos e ajuste os prazos de acompanhamento. O histórico é preservado.</p>
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="min-w-56 flex-1 text-sm font-medium text-slate-700">Adicionar do catálogo
-                <select value={novo} onChange={(e) => setNovo(e.target.value)} className="mt-1 w-full rounded-lg border p-2">
-                    <option value="">Selecione um documento</option>
-                    {disponiveis.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
-                </select>
-            </label>
-            <button type="button" disabled={!novo || ocupado} onClick={() => void enviar(base, "POST", { documento_id: novo })}
-                className="rounded-lg bg-[#22365b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Vincular</button>
+        <div className="mt-4 rounded-xl border p-4">
+            <h3 className="font-semibold text-[#22365b]">Vincular vários documentos</h3>
+            <input type="search" placeholder="Buscar documentos..." aria-label="Buscar documentos" value={busca} onChange={(e) => setBusca(e.target.value)} className="mt-3 w-full rounded-lg border p-2 text-sm" />
+            <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                <button type="button" disabled={ocupado} onClick={() => setSelecionados((atual) => [...new Set([...atual, ...filtrados.map((item) => item.id)])])} className="font-semibold text-[#22365b]">Selecionar resultados</button>
+                <button type="button" disabled={ocupado} onClick={() => setSelecionados([])} className="font-semibold text-slate-600">Limpar</button>
+                <span>{selecionados.length} selecionado(s)</span>
+            </div>
+            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
+                {filtrados.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-slate-50">
+                    <input type="checkbox" checked={selecionados.includes(item.id)} disabled={ocupado} onChange={(e) => setSelecionados((atual) => e.target.checked ? [...atual, item.id] : atual.filter((id) => id !== item.id))} />
+                    {item.nome}
+                </label>)}
+                {!filtrados.length && <p className="text-sm text-slate-500">Nenhum documento disponível.</p>}
+            </div>
+            <button type="button" disabled={ocupado || !selecionados.length} onClick={() => void vincularLote()} className="mt-3 rounded-lg bg-[#22365b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{ocupado ? "Vinculando..." : "Vincular selecionados"}</button>
         </div>
         <div className="mt-5 space-y-2">
             {documentos.map((doc) => <div key={doc.id} className="rounded-lg border border-slate-200 p-3">
