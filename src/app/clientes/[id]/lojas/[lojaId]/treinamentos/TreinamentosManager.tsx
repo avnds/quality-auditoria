@@ -72,7 +72,7 @@ export default function TreinamentosManager({ lojaId }: Props) {
         return `${ano}-${mes}-${dia}`;
     });
     const [cargaHoraria, setCargaHoraria] = useState("4");
-    const [validadeMeses, setValidadeMeses] = useState("12");
+    const [validadeMeses, setValidadeMeses] = useState("6");
     const [conteudoProgramatico, setConteudoProgramatico] = useState("Boas Práticas de Fabricação e Manipulação");
     const [ministrante, setMinistrante] = useState("");
     const [carregando, setCarregando] = useState(true);
