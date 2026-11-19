@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CriarDocumentoCatalogo from "./CriarDocumentoCatalogo";
 
 type Vinculo = { id: string; nome: string; ativo: number; periodicidade_meses: number | null; alerta_dias: number | null; periodicidade_padrao: number | null; alerta_padrao: number };
 type Catalogo = { id: string; nome: string; ativo: number };
-type Props = { lojaId: string; documentos: Vinculo[]; aoAtualizar: () => void };
+type Props = { lojaId: string; documentos: Vinculo[]; aoAtualizar: () => void; podeGerenciarCatalogo: boolean };
 function numeroOpcional(valor: string) { return valor.trim() ? Number(valor) : null; }
 
-export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }: Props) {
+export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar, podeGerenciarCatalogo }: Props) {
     const [catalogo, setCatalogo] = useState<Catalogo[]>([]);
     const [selecionados, setSelecionados] = useState<string[]>([]);
     const [busca, setBusca] = useState("");
@@ -89,6 +90,7 @@ export default function GerenciarDocumentos({ lojaId, documentos, aoAtualizar }:
             </div>
             <button type="button" disabled={ocupado || !selecionados.length} onClick={() => void vincularLote()} className="mt-3 rounded-lg bg-[#22365b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{ocupado ? "Vinculando..." : "Vincular selecionados"}</button>
         </div>
+        {podeGerenciarCatalogo && <CriarDocumentoCatalogo aoCriar={(documento) => { setCatalogo((atual) => [...atual, documento]); setMensagem("Documento criado. Selecione-o para vincular à loja."); }} />}
         <div className="mt-5 space-y-2">
             {documentos.map((doc) => <div key={doc.id} className="rounded-lg border border-slate-200 bg-white p-3 text-slate-800">
                 <div className="flex flex-wrap items-center justify-between gap-3">
