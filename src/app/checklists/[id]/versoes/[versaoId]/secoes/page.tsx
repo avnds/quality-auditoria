@@ -4,6 +4,7 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { temPermissao } from "@/lib/auth/authorization";
 import NovaSecaoButton from "./NovaSecaoButton";
+import EditarSecaoButton from "./EditarSecaoButton";
 import ExcluirSecaoButton from "./ExcluirSecaoButton";
 
 type SecoesPageProps = {
@@ -224,6 +225,7 @@ export default async function SecoesPage({
                                             Itens
                                         </Link>
 
+                                        {podeExcluirSecao && <EditarSecaoButton checklistId={id} versaoId={versaoId} secao={secao} />}
                                         {podeExcluirSecao && (
                                             <ExcluirSecaoButton
                                                 checklistId={id}
