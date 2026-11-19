@@ -256,7 +256,7 @@ export async function POST(
         centralizar("CERTIFICAMOS QUE", 360, 12, negrito, azul, 430, 500);
         centralizar(nome, 319, 27, negrito, azul, 430, 650);
         if (cargo) centralizar(cargo, 300, 9, fonte, cinza, 430, 560);
-        centralizar("PARTICIPOU DE", 272, 11, negrito, azul, 430, 540);
+        centralizar("PARTICIPOU DO TREINAMENTO", 272, 11, negrito, azul, 430, 540);
         centralizar(titulo, 242, 19, negrito, azul, 430, 690);
         centralizar(`REALIZADO EM ${data}  |  LOCAL: ${localTreinamento}`, 219, 10, fonte, cinza, 430, 650);
         centralizar(`MINISTRANTE: ${ministrante}`, 205, 9, fonte, cinza, 430, 650);
