@@ -437,6 +437,8 @@ export async function GET(
             success: true,
             auditoria: {
                 usuario_perfil: usuario.perfil,
+                usuario_id: String(usuario.id),
+                pode_responder: (await requirePermission("auditorias.responder")).autorizado && String(auditoria.auditor_id) === String(usuario.id),
                 id: String(auditoria.id),
                 loja_id: String(auditoria.loja_id),
                 loja_nome: String(auditoria.loja_nome),
