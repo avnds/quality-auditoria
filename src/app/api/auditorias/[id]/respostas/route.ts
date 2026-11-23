@@ -308,14 +308,9 @@ export async function POST(
                             sql: `
                         DELETE FROM evidencias
                         WHERE resposta_id = ?
-                          AND EXISTS (
-                              SELECT 1
-                              FROM auditoria_respostas ar
-                              WHERE ar.id = evidencias.resposta_id
-                                AND ar.resultado = ?
-                          )
+                          AND changes() = 1
                     `,
-                            args: [respostaId, resultado],
+                            args: [respostaId],
                         },
                     ],
                     "write"
