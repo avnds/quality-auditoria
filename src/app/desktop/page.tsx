@@ -13,9 +13,15 @@ export default async function DesktopPage() {
     const ambiente = identificarAmbienteBanco();
     const cabecalhos = await headers();
     const host = cabecalhos.get("host") ?? "";
+    // Somente a origem local, a produção conhecida ou o hostname exato
+    // deste deploy Vercel podem iniciar o vínculo com o aplicativo.
+    const hostPreview = process.env.VERCEL_URL ?? "";
     const origem = host === "localhost:3000" || host === "127.0.0.1:3000"
         ? `http://${host}`
-        : host === "quality-auditoria.vercel.app" ? `https://${host}` : null;
+        : host === "quality-auditoria.vercel.app" ||
+          (hostPreview.endsWith(".vercel.app") && host === hostPreview)
+            ? `https://${host}`
+            : null;
     const vinculo = origem ? `qualitydesktop://setup?origin=${encodeURIComponent(origem)}` : null;
     if (ambiente === "production_offline") redirect("/");
     return (
