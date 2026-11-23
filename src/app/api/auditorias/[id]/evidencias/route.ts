@@ -1,4 +1,4 @@
-import { salvarEvidenciaLocal, removerEvidenciaLocal, substituirEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
+import { salvarEvidenciaLocal, removerEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
 import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { del, get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
@@ -194,7 +194,11 @@ export async function GET(
             evidenciaResult.rows[0];
 
         if (process.env.QUALITY_RUNTIME === "desktop") {
-            const local = abrirArquivoDesktop("evidencia", evidenciaId);
+            const uriLocal = String(evidencia.arquivo_uri);
+            const idArquivo = uriLocal.startsWith("desktop:evidencia:")
+                ? uriLocal.slice("desktop:evidencia:".length)
+                : evidenciaId;
+            const local = abrirArquivoDesktop("evidencia", idArquivo);
             return local ?? NextResponse.json({ success: false, message: "Arquivo offline não encontrado." }, { status: 404 });
         }
 
@@ -965,32 +969,49 @@ export async function PUT(
 
 
         if (process.env.QUALITY_RUNTIME === "desktop") {
-            // O arquivo usa o mesmo ID da evidência. A gravação local não consulta Blob.
-            const autorizacaoAtual = await db.execute({
-                sql: `UPDATE evidencias
-                      SET capturada_em = CURRENT_TIMESTAMP
-                      WHERE id = ?
-                        AND arquivo_uri = ?
-                        AND EXISTS (
-                            SELECT 1 FROM auditoria_respostas ar
-                            INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
-                            INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
-                            INNER JOIN auditorias a ON a.id = av.auditoria_id
-                            WHERE ar.id = evidencias.resposta_id
-                              AND av.id = ?
-                              AND av.status IN ('ABERTA', 'EM_CORRECAO')
-                              AND a.auditor_id = ?
-                              AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
-                        )`,
-                args: [evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
-            });
-            if (autorizacaoAtual.rowsAffected !== 1) {
+            // Publica a nova imagem em outro arquivo; a original só é removida
+            // depois da confirmação da troca no banco.
+            const novoArquivoId = crypto.randomUUID();
+            const uri = await salvarEvidenciaLocal(novoArquivoId, arquivo);
+            let substituicaoLocal;
+            try {
+                substituicaoLocal = await db.execute({
+                    sql: `UPDATE evidencias
+                          SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP
+                          WHERE id = ?
+                            AND arquivo_uri = ?
+                            AND EXISTS (
+                                SELECT 1 FROM auditoria_respostas ar
+                                INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                                INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                                INNER JOIN auditorias a ON a.id = av.auditoria_id
+                                WHERE ar.id = evidencias.resposta_id
+                                  AND av.id = ?
+                                  AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                                  AND a.auditor_id = ?
+                                  AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                            )`,
+                    args: [uri, evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
+                });
+            } catch (erro) {
+                removerEvidenciaLocal(novoArquivoId);
+                throw erro;
+            }
+            if (substituicaoLocal.rowsAffected !== 1) {
+                removerEvidenciaLocal(novoArquivoId);
                 return NextResponse.json(
                     { success: false, message: "A evidência mudou ou a auditoria não permite mais alterações." },
                     { status: 409 }
                 );
             }
-            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
+            const uriAnterior = String(evidencia.arquivo_uri);
+            if (uriAnterior.startsWith("desktop:evidencia:")) {
+                try {
+                    removerEvidenciaLocal(uriAnterior.slice("desktop:evidencia:".length));
+                } catch (erro) {
+                    console.error("Falha ao limpar imagem local anterior:", erro);
+                }
+            }
             return NextResponse.json({
                 success: true,
                 evidencia: { id: evidenciaId, respostaId: String(evidencia.resposta_id), arquivoUri: uri, ordem: Number(evidencia.ordem) },
