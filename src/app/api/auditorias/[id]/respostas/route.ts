@@ -282,15 +282,8 @@ export async function POST(
 
                 // Remove os registros e atualiza a resposta
                 // dentro da mesma transação de escrita.
-                await db.batch(
+                const alteracoes = await db.batch(
                     [
-                        {
-                            sql: `
-                        DELETE FROM evidencias
-                        WHERE resposta_id = ?
-                    `,
-                            args: [respostaId],
-                        },
                         {
                             sql: `
                         UPDATE auditoria_respostas
@@ -298,12 +291,42 @@ export async function POST(
                             observacao = NULL,
                             respondido_em = CURRENT_TIMESTAMP
                         WHERE id = ?
+                          AND EXISTS (
+                              SELECT 1
+                              FROM auditoria_setores aus
+                              INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                              INNER JOIN auditorias a ON a.id = av.auditoria_id
+                              WHERE aus.id = auditoria_respostas.auditoria_setor_id
+                                AND av.id = ?
+                                AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                                AND a.auditor_id = ?
+                          )
                     `,
-                            args: [resultado, respostaId],
+                            args: [resultado, respostaId, String(auditoria.auditoria_versao_id), usuario.id],
+                        },
+                        {
+                            sql: `
+                        DELETE FROM evidencias
+                        WHERE resposta_id = ?
+                          AND EXISTS (
+                              SELECT 1
+                              FROM auditoria_respostas ar
+                              WHERE ar.id = evidencias.resposta_id
+                                AND ar.resultado = ?
+                          )
+                    `,
+                            args: [respostaId, resultado],
                         },
                     ],
                     "write"
                 );
+
+                if (alteracoes[0].rowsAffected !== 1) {
+                    return NextResponse.json(
+                        { success: false, message: "A auditoria mudou de estado ou você não pode mais alterar esta resposta." },
+                        { status: 409 }
+                    );
+                }
 
                 // Os arquivos são externos ao banco.
                 // Falhas no Blob não devem restaurar evidências
