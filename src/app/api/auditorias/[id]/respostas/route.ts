@@ -327,11 +327,23 @@ export async function POST(
                     observacao = ?,
                     respondido_em = CURRENT_TIMESTAMP
                 WHERE id = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM auditoria_setores aus
+                      INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                      INNER JOIN auditorias a ON a.id = av.auditoria_id
+                      WHERE aus.id = auditoria_respostas.auditoria_setor_id
+                        AND av.id = ?
+                        AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                        AND a.auditor_id = ?
+                  )
             `,
                     args: [
                         resultado,
                         observacao || null,
                         respostaId,
+                        String(auditoria.auditoria_versao_id),
+                        usuario.id,
                     ],
                 });
             }
