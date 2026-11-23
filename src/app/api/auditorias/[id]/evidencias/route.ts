@@ -551,11 +551,30 @@ export async function POST(
             const evidenciaId = crypto.randomUUID();
             const uri = await salvarEvidenciaLocal(evidenciaId, arquivo);
             try {
-                await db.execute({
+                const insercaoLocal = await db.execute({
                     sql: `INSERT INTO evidencias (id, resposta_id, arquivo_uri, ordem, capturada_em)
-                          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-                    args: [evidenciaId, respostaId, uri, ordem],
+                          SELECT ?, ?, ?, ?, CURRENT_TIMESTAMP
+                          WHERE EXISTS (
+                              SELECT 1 FROM auditoria_respostas ar
+                              INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                              INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                              INNER JOIN auditorias a ON a.id = av.auditoria_id
+                              WHERE ar.id = ?
+                                AND av.id = ?
+                                AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                                AND a.auditor_id = ?
+                                AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                                AND (SELECT COUNT(*) FROM evidencias e WHERE e.resposta_id = ar.id) < 2
+                          )`,
+                    args: [evidenciaId, respostaId, uri, ordem, respostaId, String(auditoria.auditoria_versao_id), usuario.id],
                 });
+                if (insercaoLocal.rowsAffected !== 1) {
+                    removerEvidenciaLocal(evidenciaId);
+                    return NextResponse.json(
+                        { success: false, message: "A auditoria mudou de estado ou o limite de evidências foi atingido." },
+                        { status: 409 }
+                    );
+                }
             } catch (erro) {
                 removerEvidenciaLocal(evidenciaId);
                 throw erro;
