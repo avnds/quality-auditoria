@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/auth-response";
 
 import { del } from "@vercel/blob";
+import { removerEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
 
 type RouteContext = {
     params: Promise<{
@@ -328,10 +329,15 @@ export async function POST(
                 // que já foram removidas do banco.
                 for (const evidencia of evidenciasAntigas) {
                     try {
-                        await del(evidencia.arquivo_uri);
+                        if (evidencia.arquivo_uri.startsWith("desktop:evidencia:")) {
+                            const idArquivo = evidencia.arquivo_uri.slice("desktop:evidencia:".length);
+                            removerEvidenciaLocal(idArquivo);
+                        } else {
+                            await del(evidencia.arquivo_uri);
+                        }
                     } catch (erro) {
                         console.error(
-                            "Falha ao excluir evidência do Vercel Blob:",
+                            "Falha ao excluir arquivo de evidência:",
                             evidencia.arquivo_uri,
                             erro
                         );
