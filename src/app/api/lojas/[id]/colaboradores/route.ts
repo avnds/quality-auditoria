@@ -75,7 +75,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function POST(request: Request, context: RouteContext) {
     try {
-        const auth = await requirePermission("colaboradores.gerenciar");
+        const auth = await requirePermission("colaboradores.visualizar");
 
         if (!auth.autorizado) {
             return auth.motivo === "NAO_AUTENTICADO"
@@ -85,10 +85,13 @@ export async function POST(request: Request, context: RouteContext) {
 
         const { id: lojaId } = await context.params;
 
-        if (
+        if (!(await usuarioPodeAcessarLoja(lojaId, auth.usuario))) {
+            return forbiddenResponse();
+        }
+
+        if (auth.usuario.perfil !== "CONSULTOR" &&
             auth.usuario.perfil !== "MASTER" &&
-            auth.usuario.perfil !== "SUPERVISORA"
-        ) {
+            auth.usuario.perfil !== "SUPERVISORA") {
             return forbiddenResponse();
         }
 
