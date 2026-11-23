@@ -281,6 +281,7 @@ export default function ExecucaoAuditoriaPage() {
         resultado: Resultado,
         observacao: string
     ) {
+        if (!podeEditarAuditoria()) return;
         setSalvando((estadoAtual) => ({
             ...estadoAtual,
             [itemId]: true,
@@ -395,6 +396,7 @@ export default function ExecucaoAuditoriaPage() {
         itemId: string,
         origem?: "camera" | "arquivo"
     ) {
+        if (!podeEditarAuditoria()) return;
         const respostaId = respostaIds[itemId];
 
         if (!respostaId) {
@@ -553,6 +555,7 @@ export default function ExecucaoAuditoriaPage() {
         itemId: string,
         origem?: "camera" | "arquivo"
     ) => {
+        if (!podeEditarAuditoria()) return;
         if (!origem && dispositivoMovel()) {
             setEscolhaEvidencia({ tipo: "substituir", itemId, evidencia });
             return;
@@ -706,7 +709,7 @@ export default function ExecucaoAuditoriaPage() {
         input.click();
     };
     async function enviarParaValidacao() {
-        if (!auditoria) {
+        if (!auditoria || !podeEditarAuditoria()) {
             return;
         }
 
@@ -939,6 +942,7 @@ export default function ExecucaoAuditoriaPage() {
         itemId: string,
         resultado: Resultado
     ) {
+        if (!podeEditarAuditoria()) return;
         setErroResposta((estadoAtual) => ({
             ...estadoAtual,
             [itemId]: "",
@@ -1809,7 +1813,6 @@ export default function ExecucaoAuditoriaPage() {
                                                                                                                                     }
                                                                                                                                     className="block cursor-zoom-in"
                                                                                                                                     aria-label={`Abrir Foto ${evidencia.ordem}`}
-                                                                                                                                    disabled={!podeEditarAuditoria()}
                                                                                                                                 >
                                                                                                                                     <img
                                                                                                                                         src={`/api/auditorias/${id}/evidencias?evidenciaId=${encodeURIComponent(
@@ -1832,7 +1835,8 @@ export default function ExecucaoAuditoriaPage() {
                                                                                                                                             item.id
                                                                                                                                         )
                                                                                                                                     }
-                                                                                                                                    className="w-full border-t border-gray-200 px-2 py-2 text-xs font-semibold text-[#c22a2e] hover:bg-gray-50"
+                                                                                                                                    disabled={!podeEditarAuditoria()}
+                                                                                                                                    className="w-full border-t border-gray-200 px-2 py-2 text-xs font-semibold text-[#c22a2e] hover:bg-gray-50 disabled:opacity-50"
                                                                                                                                 >
                                                                                                                                     Substituir foto
                                                                                                                                 </button>
