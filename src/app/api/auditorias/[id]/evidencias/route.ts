@@ -994,19 +994,35 @@ export async function PUT(
             url: blob.url,
         };
 
-        await db.execute({
+        const substituicao = await db.execute({
             sql: `
                 UPDATE evidencias
-                SET
-                    arquivo_uri = ?,
-                    capturada_em = CURRENT_TIMESTAMP
+                SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP
                 WHERE id = ?
+                  AND arquivo_uri = ?
+                  AND EXISTS (
+                      SELECT 1 FROM auditoria_respostas ar
+                      INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                      INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                      INNER JOIN auditorias a ON a.id = av.auditoria_id
+                      WHERE ar.id = evidencias.resposta_id
+                        AND av.id = ?
+                        AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                        AND a.auditor_id = ?
+                        AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                  )
             `,
-            args: [
-                blob.url,
-                evidenciaId,
-            ],
+            args: [blob.url, evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
         });
+
+        if (substituicao.rowsAffected !== 1) {
+            await del(blob.url).catch((erro) => console.error("Falha ao limpar substituição não autorizada:", erro));
+            blobCriado = null;
+            return NextResponse.json(
+                { success: false, message: "A evidência mudou ou a auditoria não permite mais alterações." },
+                { status: 409 }
+            );
+        }
 
         try {
             await del(
