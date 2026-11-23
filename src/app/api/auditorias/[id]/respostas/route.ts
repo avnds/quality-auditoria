@@ -320,7 +320,7 @@ export async function POST(
                     }
                 }
             } else {
-                await db.execute({
+                const atualizacao = await db.execute({
                     sql: `
                 UPDATE auditoria_respostas
                 SET resultado = ?,
@@ -346,6 +346,13 @@ export async function POST(
                         usuario.id,
                     ],
                 });
+
+                if (atualizacao.rowsAffected !== 1) {
+                    return NextResponse.json(
+                        { success: false, message: "A auditoria mudou de estado ou você não pode mais alterar esta resposta." },
+                        { status: 409 }
+                    );
+                }
             }
 
             return NextResponse.json({
