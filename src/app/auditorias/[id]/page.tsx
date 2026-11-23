@@ -68,6 +68,8 @@ type Auditoria = {
     auditor_nome: string;
     auditor_perfil: string;
     usuario_perfil: string;
+    usuario_id: string;
+    pode_responder: boolean;
     encarregado_nome: string | null;
     gerente_setor_nome: string | null;
     gerente_loja_nome: string | null;
@@ -925,8 +927,9 @@ export default function ExecucaoAuditoriaPage() {
     }
     function podeEditarAuditoria() {
         return (
-            auditoria?.versao.status === "ABERTA" ||
-            auditoria?.versao.status === "EM_CORRECAO"
+            auditoria?.pode_responder === true &&
+            (auditoria.versao.status === "ABERTA" ||
+            auditoria.versao.status === "EM_CORRECAO")
         );
     }
 
@@ -1713,7 +1716,7 @@ export default function ExecucaoAuditoriaPage() {
 
                                                                                             <button
                                                                                                 type="button"
-                                                                                                disabled={salvando[item.id]}
+                                                                                                disabled={salvando[item.id] || !podeEditarAuditoria()}
                                                                                                 onClick={() =>
                                                                                                     selecionarResultado(
                                                                                                         setor.auditoria_setor_id,
@@ -1732,7 +1735,7 @@ export default function ExecucaoAuditoriaPage() {
 
                                                                                             <button
                                                                                                 type="button"
-                                                                                                disabled={salvando[item.id]}
+                                                                                                disabled={salvando[item.id] || !podeEditarAuditoria()}
                                                                                                 onClick={() =>
                                                                                                     selecionarResultado(
                                                                                                         setor.auditoria_setor_id,
@@ -1751,7 +1754,7 @@ export default function ExecucaoAuditoriaPage() {
 
                                                                                             <button
                                                                                                 type="button"
-                                                                                                disabled={salvando[item.id]}
+                                                                                                disabled={salvando[item.id] || !podeEditarAuditoria()}
                                                                                                 onClick={() =>
                                                                                                     selecionarResultado(
                                                                                                         setor.auditoria_setor_id,
@@ -1916,8 +1919,7 @@ export default function ExecucaoAuditoriaPage() {
             </div>
 
             {(
-                auditoria.versao.status === "ABERTA" ||
-                auditoria.versao.status === "EM_CORRECAO"
+                podeEditarAuditoria()
             ) && (
                     <div className="mt-6 flex justify-end">
                         <button
