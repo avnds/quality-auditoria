@@ -966,11 +966,31 @@ export async function PUT(
 
         if (process.env.QUALITY_RUNTIME === "desktop") {
             // O arquivo usa o mesmo ID da evidência. A gravação local não consulta Blob.
-            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
-            await db.execute({
-                sql: `UPDATE evidencias SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP WHERE id = ?`,
-                args: [uri, evidenciaId],
+            const autorizacaoAtual = await db.execute({
+                sql: `UPDATE evidencias
+                      SET capturada_em = CURRENT_TIMESTAMP
+                      WHERE id = ?
+                        AND arquivo_uri = ?
+                        AND EXISTS (
+                            SELECT 1 FROM auditoria_respostas ar
+                            INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                            INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                            INNER JOIN auditorias a ON a.id = av.auditoria_id
+                            WHERE ar.id = evidencias.resposta_id
+                              AND av.id = ?
+                              AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                              AND a.auditor_id = ?
+                              AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                        )`,
+                args: [evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
             });
+            if (autorizacaoAtual.rowsAffected !== 1) {
+                return NextResponse.json(
+                    { success: false, message: "A evidência mudou ou a auditoria não permite mais alterações." },
+                    { status: 409 }
+                );
+            }
+            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
             return NextResponse.json({
                 success: true,
                 evidencia: { id: evidenciaId, respostaId: String(evidencia.resposta_id), arquivoUri: uri, ordem: Number(evidencia.ordem) },
