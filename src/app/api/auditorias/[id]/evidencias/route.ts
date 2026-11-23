@@ -587,7 +587,7 @@ export async function POST(
         const evidenciaId =
             crypto.randomUUID();
 
-        await db.execute({
+        const insercaoEvidencia = await db.execute({
             sql: `
                 INSERT INTO evidencias (
                     id,
@@ -596,12 +596,19 @@ export async function POST(
                     ordem,
                     capturada_em
                 )
-                VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    CURRENT_TIMESTAMP
+                SELECT ?, ?, ?, ?, CURRENT_TIMESTAMP
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auditoria_respostas ar
+                    INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                    INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                    INNER JOIN auditorias a ON a.id = av.auditoria_id
+                    WHERE ar.id = ?
+                      AND av.id = ?
+                      AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                      AND a.auditor_id = ?
+                      AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                      AND (SELECT COUNT(*) FROM evidencias e WHERE e.resposta_id = ar.id) < 2
                 )
             `,
             args: [
@@ -609,8 +616,20 @@ export async function POST(
                 respostaId,
                 blob.url,
                 ordem,
+                respostaId,
+                String(auditoria.auditoria_versao_id),
+                usuario.id,
             ],
         });
+
+        if (insercaoEvidencia.rowsAffected !== 1) {
+            await del(blob.url).catch((erro) => console.error("Falha ao limpar upload não autorizado:", erro));
+            blobCriado = null;
+            return NextResponse.json(
+                { success: false, message: "A auditoria mudou de estado ou o limite de evidências foi atingido." },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
