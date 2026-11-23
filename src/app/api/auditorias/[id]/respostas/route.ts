@@ -393,7 +393,7 @@ export async function POST(
 
         const respostaId = crypto.randomUUID();
 
-        await db.execute({
+        const insercao = await db.execute({
             sql: `
                 INSERT INTO auditoria_respostas (
                     id,
@@ -403,7 +403,17 @@ export async function POST(
                     observacao,
                     respondido_em
                 )
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                SELECT ?, ?, ?, ?, ?, CURRENT_TIMESTAMP
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auditoria_setores aus
+                    INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                    INNER JOIN auditorias a ON a.id = av.auditoria_id
+                    WHERE aus.id = ?
+                      AND av.id = ?
+                      AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                      AND a.auditor_id = ?
+                )
             `,
             args: [
                 respostaId,
@@ -411,8 +421,18 @@ export async function POST(
                 checklistItemId,
                 resultado,
                 observacao || null,
+                auditoriaSetorId,
+                String(auditoria.auditoria_versao_id),
+                usuario.id,
             ],
         });
+
+        if (insercao.rowsAffected !== 1) {
+            return NextResponse.json(
+                { success: false, message: "A auditoria mudou de estado ou você não pode mais inserir respostas." },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
