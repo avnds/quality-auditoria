@@ -369,6 +369,18 @@ export default function NovaAuditoriaForm({
                     versoes: versoesPublicadas,
                 },
             }));
+
+            // Pré-seleciona a V1 publicada, preservando a escolha manual
+            // de qualquer outra versão pelo usuário.
+            const versaoInicial = versoesPublicadas.find(
+                (versao: VersaoChecklist) => Number(versao.numero) === 1
+            );
+            if (versaoInicial) {
+                setVersoesSelecionadas((atual) => ({
+                    ...atual,
+                    [setorId]: atual[setorId] || versaoInicial.id,
+                }));
+            }
         } catch (error) {
             console.error(error);
 

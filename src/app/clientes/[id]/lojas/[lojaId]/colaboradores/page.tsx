@@ -63,7 +63,8 @@ export default async function ColaboradoresPage({ params }: PageProps) {
     }
 
     const loja = lojaResult.rows[0];
-    const podeGerenciar =
+    const podeGerenciar = await temPermissao(usuario.id, "colaboradores.visualizar");
+    const podeAlterarStatus =
         (usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA") &&
         await temPermissao(usuario.id, "colaboradores.gerenciar");
 
@@ -85,7 +86,7 @@ export default async function ColaboradoresPage({ params }: PageProps) {
                 </div>
 
                 {podeGerenciar ? (
-                    <ColaboradoresManager lojaId={lojaId} lojaNome={String(loja.nome)} />
+                    <ColaboradoresManager lojaId={lojaId} lojaNome={String(loja.nome)} podeAlterarStatus={podeAlterarStatus} />
                 ) : (
                     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <p className="text-sm text-slate-600">

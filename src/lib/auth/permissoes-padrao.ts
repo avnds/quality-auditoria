@@ -14,7 +14,8 @@ export const PERMISSOES_PADRAO = {
         "relatorios.visualizar",
         "relatorios.baixar",
         "documentos.visualizar",
-        "documentos.verificar"
+        "documentos.verificar",
+        "colaboradores.visualizar"
     ],
     "SUPERVISORA": [
         "usuarios.visualizar",

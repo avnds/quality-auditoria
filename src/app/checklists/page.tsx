@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import db from "@/lib/db";
+import { temPermissao } from "@/lib/auth/authorization";
 import ChecklistsTable from "./ChecklistsTable";
 import NovoChecklistButton from "./NovoChecklistButton";
 
@@ -11,10 +12,9 @@ export default async function ChecklistsPage() {
         redirect("/login");
     }
 
-    const podeVisualizar =
-        usuario.perfil === "MASTER" ||
-        usuario.perfil === "SUPERVISORA" ||
-        usuario.perfil === "CONSULTOR";
+    const podeVisualizar = await temPermissao(usuario.id, "checklists.visualizar");
+    const podeCriar = (usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA") && await temPermissao(usuario.id, "checklists.criar");
+    const podeGerenciar = (usuario.perfil === "MASTER" || usuario.perfil === "SUPERVISORA") && await temPermissao(usuario.id, "checklists.editar");
 
     if (!podeVisualizar) {
         redirect("/");
@@ -86,9 +86,9 @@ export default async function ChecklistsPage() {
                             </p>
                         </div>
 
-                        <div className="shrink-0">
+                        {podeCriar && <div className="shrink-0">
                             <NovoChecklistButton setores={setores} />
-                        </div>
+                        </div>}
                     </div>
 
 
@@ -97,10 +97,7 @@ export default async function ChecklistsPage() {
                 <ChecklistsTable
                     checklistsIniciais={checklists}
                     setores={setores}
-                    podeGerenciar={
-                        usuario.perfil === "MASTER" ||
-                        usuario.perfil === "SUPERVISORA"
-                    }
+                    podeGerenciar={podeGerenciar}
                 />
             </div>
         </main>

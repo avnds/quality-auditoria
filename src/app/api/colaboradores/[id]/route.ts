@@ -45,7 +45,7 @@ async function podeAcessarLoja(
 
 export async function PUT(request: Request, context: RouteContext) {
     try {
-        const auth = await requirePermission("colaboradores.gerenciar");
+        const auth = await requirePermission("colaboradores.visualizar");
 
         if (!auth.autorizado) {
             return auth.motivo === "NAO_AUTENTICADO"
@@ -66,8 +66,8 @@ export async function PUT(request: Request, context: RouteContext) {
         const colaborador = existente.rows[0];
 
         if (
-            !(await podeAcessarLoja(String(colaborador.loja_id), auth.usuario)) ||
-            (auth.usuario.perfil !== "MASTER" && auth.usuario.perfil !== "SUPERVISORA")
+            !(await podeAcessarLoja(String(colaborador.loja_id), auth.usuario)) || 
+            !["MASTER", "SUPERVISORA", "CONSULTOR"].includes(auth.usuario.perfil)
         ) {
             return forbiddenResponse();
         }

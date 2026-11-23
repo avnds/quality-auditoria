@@ -1,4 +1,4 @@
-import { salvarEvidenciaLocal, removerEvidenciaLocal, substituirEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
+import { salvarEvidenciaLocal, removerEvidenciaLocal } from "@/lib/desktop/salvar-evidencia-local";
 import { abrirArquivoDesktop } from "@/lib/desktop/abrir-arquivo-local";
 import { del, get, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
@@ -194,7 +194,11 @@ export async function GET(
             evidenciaResult.rows[0];
 
         if (process.env.QUALITY_RUNTIME === "desktop") {
-            const local = abrirArquivoDesktop("evidencia", evidenciaId);
+            const uriLocal = String(evidencia.arquivo_uri);
+            const idArquivo = uriLocal.startsWith("desktop:evidencia:")
+                ? uriLocal.slice("desktop:evidencia:".length)
+                : evidenciaId;
+            const local = abrirArquivoDesktop("evidencia", idArquivo);
             return local ?? NextResponse.json({ success: false, message: "Arquivo offline não encontrado." }, { status: 404 });
         }
 
@@ -368,6 +372,7 @@ export async function POST(
                 SELECT
                     a.id,
                     a.loja_id,
+                    a.auditor_id,
                     av.id AS auditoria_versao_id,
                     av.status AS auditoria_status
                 FROM auditorias a
@@ -401,6 +406,10 @@ export async function POST(
 
         const auditoria =
             auditoriaResult.rows[0];
+
+        if (String(auditoria.auditor_id) !== String(usuario.id)) {
+            return NextResponse.json({ success: false, message: "Somente o auditor responsável pode alterar evidências." }, { status: 403 });
+        }
 
         if (
             usuario.perfil !== "MASTER" &&
@@ -546,11 +555,30 @@ export async function POST(
             const evidenciaId = crypto.randomUUID();
             const uri = await salvarEvidenciaLocal(evidenciaId, arquivo);
             try {
-                await db.execute({
+                const insercaoLocal = await db.execute({
                     sql: `INSERT INTO evidencias (id, resposta_id, arquivo_uri, ordem, capturada_em)
-                          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-                    args: [evidenciaId, respostaId, uri, ordem],
+                          SELECT ?, ?, ?, ?, CURRENT_TIMESTAMP
+                          WHERE EXISTS (
+                              SELECT 1 FROM auditoria_respostas ar
+                              INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                              INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                              INNER JOIN auditorias a ON a.id = av.auditoria_id
+                              WHERE ar.id = ?
+                                AND av.id = ?
+                                AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                                AND a.auditor_id = ?
+                                AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                                AND (SELECT COUNT(*) FROM evidencias e WHERE e.resposta_id = ar.id) < 2
+                          )`,
+                    args: [evidenciaId, respostaId, uri, ordem, respostaId, String(auditoria.auditoria_versao_id), usuario.id],
                 });
+                if (insercaoLocal.rowsAffected !== 1) {
+                    removerEvidenciaLocal(evidenciaId);
+                    return NextResponse.json(
+                        { success: false, message: "A auditoria mudou de estado ou o limite de evidências foi atingido." },
+                        { status: 409 }
+                    );
+                }
             } catch (erro) {
                 removerEvidenciaLocal(evidenciaId);
                 throw erro;
@@ -582,7 +610,7 @@ export async function POST(
         const evidenciaId =
             crypto.randomUUID();
 
-        await db.execute({
+        const insercaoEvidencia = await db.execute({
             sql: `
                 INSERT INTO evidencias (
                     id,
@@ -591,12 +619,19 @@ export async function POST(
                     ordem,
                     capturada_em
                 )
-                VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    CURRENT_TIMESTAMP
+                SELECT ?, ?, ?, ?, CURRENT_TIMESTAMP
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auditoria_respostas ar
+                    INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                    INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                    INNER JOIN auditorias a ON a.id = av.auditoria_id
+                    WHERE ar.id = ?
+                      AND av.id = ?
+                      AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                      AND a.auditor_id = ?
+                      AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                      AND (SELECT COUNT(*) FROM evidencias e WHERE e.resposta_id = ar.id) < 2
                 )
             `,
             args: [
@@ -604,8 +639,20 @@ export async function POST(
                 respostaId,
                 blob.url,
                 ordem,
+                respostaId,
+                String(auditoria.auditoria_versao_id),
+                usuario.id,
             ],
         });
+
+        if (insercaoEvidencia.rowsAffected !== 1) {
+            await del(blob.url).catch((erro) => console.error("Falha ao limpar upload não autorizado:", erro));
+            blobCriado = null;
+            return NextResponse.json(
+                { success: false, message: "A auditoria mudou de estado ou o limite de evidências foi atingido." },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
@@ -763,6 +810,7 @@ export async function PUT(
                     SELECT
                         a.id,
                         a.loja_id,
+                    a.auditor_id,
                         av.id AS auditoria_versao_id,
                         av.status AS auditoria_status
                     FROM auditorias a
@@ -798,6 +846,10 @@ export async function PUT(
 
         const auditoria =
             auditoriaResult.rows[0];
+
+        if (String(auditoria.auditor_id) !== String(usuario.id)) {
+            return NextResponse.json({ success: false, message: "Somente o auditor responsável pode alterar evidências." }, { status: 403 });
+        }
 
         if (
             usuario.perfil !== "MASTER" &&
@@ -917,12 +969,49 @@ export async function PUT(
 
 
         if (process.env.QUALITY_RUNTIME === "desktop") {
-            // O arquivo usa o mesmo ID da evidência. A gravação local não consulta Blob.
-            const uri = await substituirEvidenciaLocal(evidenciaId, arquivo);
-            await db.execute({
-                sql: `UPDATE evidencias SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP WHERE id = ?`,
-                args: [uri, evidenciaId],
-            });
+            // Publica a nova imagem em outro arquivo; a original só é removida
+            // depois da confirmação da troca no banco.
+            const novoArquivoId = crypto.randomUUID();
+            const uri = await salvarEvidenciaLocal(novoArquivoId, arquivo);
+            let substituicaoLocal;
+            try {
+                substituicaoLocal = await db.execute({
+                    sql: `UPDATE evidencias
+                          SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP
+                          WHERE id = ?
+                            AND arquivo_uri = ?
+                            AND EXISTS (
+                                SELECT 1 FROM auditoria_respostas ar
+                                INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                                INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                                INNER JOIN auditorias a ON a.id = av.auditoria_id
+                                WHERE ar.id = evidencias.resposta_id
+                                  AND av.id = ?
+                                  AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                                  AND a.auditor_id = ?
+                                  AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                            )`,
+                    args: [uri, evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
+                });
+            } catch (erro) {
+                removerEvidenciaLocal(novoArquivoId);
+                throw erro;
+            }
+            if (substituicaoLocal.rowsAffected !== 1) {
+                removerEvidenciaLocal(novoArquivoId);
+                return NextResponse.json(
+                    { success: false, message: "A evidência mudou ou a auditoria não permite mais alterações." },
+                    { status: 409 }
+                );
+            }
+            const uriAnterior = String(evidencia.arquivo_uri);
+            if (uriAnterior.startsWith("desktop:evidencia:")) {
+                try {
+                    removerEvidenciaLocal(uriAnterior.slice("desktop:evidencia:".length));
+                } catch (erro) {
+                    console.error("Falha ao limpar imagem local anterior:", erro);
+                }
+            }
             return NextResponse.json({
                 success: true,
                 evidencia: { id: evidenciaId, respostaId: String(evidencia.resposta_id), arquivoUri: uri, ordem: Number(evidencia.ordem) },
@@ -946,19 +1035,35 @@ export async function PUT(
             url: blob.url,
         };
 
-        await db.execute({
+        const substituicao = await db.execute({
             sql: `
                 UPDATE evidencias
-                SET
-                    arquivo_uri = ?,
-                    capturada_em = CURRENT_TIMESTAMP
+                SET arquivo_uri = ?, capturada_em = CURRENT_TIMESTAMP
                 WHERE id = ?
+                  AND arquivo_uri = ?
+                  AND EXISTS (
+                      SELECT 1 FROM auditoria_respostas ar
+                      INNER JOIN auditoria_setores aus ON aus.id = ar.auditoria_setor_id
+                      INNER JOIN auditoria_versoes av ON av.id = aus.auditoria_versao_id
+                      INNER JOIN auditorias a ON a.id = av.auditoria_id
+                      WHERE ar.id = evidencias.resposta_id
+                        AND av.id = ?
+                        AND av.status IN ('ABERTA', 'EM_CORRECAO')
+                        AND a.auditor_id = ?
+                        AND ar.resultado IN ('NAO_CONFORME', 'PARCIALMENTE_CONFORME')
+                  )
             `,
-            args: [
-                blob.url,
-                evidenciaId,
-            ],
+            args: [blob.url, evidenciaId, String(evidencia.arquivo_uri), String(auditoria.auditoria_versao_id), usuario.id],
         });
+
+        if (substituicao.rowsAffected !== 1) {
+            await del(blob.url).catch((erro) => console.error("Falha ao limpar substituição não autorizada:", erro));
+            blobCriado = null;
+            return NextResponse.json(
+                { success: false, message: "A evidência mudou ou a auditoria não permite mais alterações." },
+                { status: 409 }
+            );
+        }
 
         try {
             await del(

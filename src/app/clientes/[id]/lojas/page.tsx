@@ -393,6 +393,15 @@ export default async function LojasPage({
                                                                 </>
                                                             )}
 
+                                                            {!podeGerenciar && (
+                                                                <Link
+                                                                    href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
+                                                                    className="inline-flex items-center justify-center rounded-lg border border-[#22365b]/20 px-3 py-2 text-xs font-semibold text-[#22365b] hover:bg-slate-50"
+                                                                >
+                                                                    Colaboradores
+                                                                </Link>
+                                                            )}
+
                                                             <TelefonesLojaButton
                                                                 lojaId={loja.id}
                                                                 podeGerenciar={podeGerenciar}
@@ -474,6 +483,17 @@ export default async function LojasPage({
                                                         : "Inativo"}
                                                 </span>
                                             </div>
+
+                                            {!podeGerenciar && (
+                                                <div className="mt-4 border-t border-gray-100 pt-4">
+                                                    <Link
+                                                        href={`/clientes/${cliente.id}/lojas/${loja.id}/colaboradores`}
+                                                        className="inline-flex rounded-lg border border-[#22365b] px-3 py-2 text-xs font-semibold text-[#22365b]"
+                                                    >
+                                                        Colaboradores
+                                                    </Link>
+                                                </div>
+                                            )}
 
                                             {podeGerenciar && (
                                                 <div className="mt-4 border-t border-gray-100 pt-4 flex flex-wrap items-center gap-2">

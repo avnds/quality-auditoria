@@ -11,12 +11,12 @@ type Colaborador = {
     ativo: number;
 };
 
-type Props = { lojaId: string; lojaNome: string };
+type Props = { lojaId: string; lojaNome: string; podeAlterarStatus: boolean };
 
 const campo =
     "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#22365b] focus:ring-2 focus:ring-[#22365b]/10";
 
-export default function ColaboradoresManager({ lojaId, lojaNome }: Props) {
+export default function ColaboradoresManager({ lojaId, lojaNome, podeAlterarStatus }: Props) {
     const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
     const [carregando, setCarregando] = useState(true);
     const [salvando, setSalvando] = useState(false);
@@ -212,9 +212,9 @@ export default function ColaboradoresManager({ lojaId, lojaNome }: Props) {
                                     <button type="button" onClick={() => iniciarEdicao(colaborador)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                                         Editar
                                     </button>
-                                    <button type="button" onClick={() => alterarStatus(colaborador)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                                    {podeAlterarStatus && <button type="button" onClick={() => alterarStatus(colaborador)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                                         {colaborador.ativo ? "Inativar" : "Reativar"}
-                                    </button>
+                                    </button>}
                                 </div>
                             </div>
                         ))}
